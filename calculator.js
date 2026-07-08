@@ -2,8 +2,31 @@
 
 const PLACEHOLDER_OPTION = { value: '', label: '— выберите —' };
 const VKR_PAGES_ANCHOR = 60;
-const VKR_PAGE_RATE = 250;
+const VKR_PAGE_RATE_HARD = 250;
+const VKR_PAGE_RATE_SOFT = 200;
 const PROJECT_DOCS_VKR = 10000;
+const TEST_UNIT_PRICE = 1070;
+
+function vkrPageRate(spec) {
+  return spec === 'hard' ? VKR_PAGE_RATE_HARD : VKR_PAGE_RATE_SOFT;
+}
+
+function vkrUrgencySurcharge(spec, urgency) {
+  const hard = spec === 'hard';
+  return {
+    normal: 0,
+    medium: hard ? 7000 : 4000,
+    urgent: hard ? 15000 : 8000,
+    veryUrgent: hard ? 25000 : 14000,
+  }[urgency] || 0;
+}
+
+function vkrUniquenessSurcharge(spec, uniqueness) {
+  if (spec === 'simple') {
+    return { none: 0, standard: 5500, high: 12000 }[uniqueness] || 0;
+  }
+  return { none: 0, standard: 7000, high: 15000 }[uniqueness] || 0;
+}
 
 const SPEC_STD = [
   { value: 'simple', label: 'Простая — гуманитарная' },
@@ -71,7 +94,7 @@ const SERVICES = {
     base: 35000,
     max: 120000,
     fields: [
-      { key: 'pages', label: 'Количество страниц', type: 'number', min: 30, max: 100, placeholder: '60', step: 1, hint: 'База за 60 стр.; ±250 ₽ за каждую стр. от 60' },
+      { key: 'pages', label: 'Количество страниц', type: 'number', min: 30, max: 100, placeholder: '60', step: 1, hint: 'База за 60 стр.; типичный диапазон 50–80 стр.; ±200–250 ₽ за каждую стр. от 60' },
       { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_VKR },
@@ -81,12 +104,13 @@ const SERVICES = {
     ],
     breakdown(v) {
       const pages = Number(v.pages);
-      const pagesDelta = (pages - VKR_PAGES_ANCHOR) * VKR_PAGE_RATE;
+      const pageRate = vkrPageRate(v.specialization);
+      const pagesDelta = (pages - VKR_PAGES_ANCHOR) * pageRate;
       const spec = { simple: 0, medium: 7000, hard: 15000 }[v.specialization];
-      const uniq = { none: 0, standard: 7000, high: 15000 }[v.uniqueness];
-      const urg = { normal: 0, medium: 7000, urgent: 15000, veryUrgent: 25000 }[v.urgency];
+      const uniq = vkrUniquenessSurcharge(v.specialization, v.uniqueness);
+      const urg = vkrUrgencySurcharge(v.specialization, v.urgency);
       return [
-        { label: `Корректировка страниц (${pages} − ${VKR_PAGES_ANCHOR}) × ${VKR_PAGE_RATE} ₽`, value: pagesDelta },
+        { label: `Корректировка страниц (${pages} − ${VKR_PAGES_ANCHOR}) × ${pageRate} ₽`, value: pagesDelta },
         { label: 'Сложность специализации', value: spec },
         { label: 'Уникальность', value: uniq },
         { label: 'Срочность', value: urg },
@@ -99,10 +123,10 @@ const SERVICES = {
 
   coursework: {
     label: 'Курсовая',
-    base: 6000,
-    max: 21000,
+    base: 4500,
+    max: 16000,
     fields: [
-      { key: 'pages', label: 'Количество страниц', type: 'number', min: 5, max: 60, placeholder: '20', step: 1, hint: '+240 ₽ за страницу' },
+      { key: 'pages', label: 'Количество страниц', type: 'number', min: 5, max: 60, placeholder: '20', step: 1, hint: '+100 ₽ за страницу' },
       { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_MID },
@@ -112,10 +136,10 @@ const SERVICES = {
     breakdown(v) {
       const pages = Number(v.pages);
       return [
-        { label: `Страницы (${pages} × 240 ₽)`, value: pages * 240 },
-        { label: 'Сложность специализации', value: { simple: 0, medium: 2250, hard: 4500 }[v.specialization] },
-        { label: 'Уникальность', value: { none: 0, standard: 2250, high: 4500 }[v.uniqueness] },
-        { label: 'Срочность', value: { normal: 0, medium: 1500, urgent: 3750, veryUrgent: 6750 }[v.urgency] },
+        { label: `Страницы (${pages} × 100 ₽)`, value: pages * 100 },
+        { label: 'Сложность специализации', value: { simple: 0, medium: 1200, hard: 3000 }[v.specialization] },
+        { label: 'Уникальность', value: { none: 0, standard: 1400, high: 3200 }[v.uniqueness] },
+        { label: 'Срочность', value: { normal: 0, medium: 1100, urgent: 2700, veryUrgent: 4800 }[v.urgency] },
         { label: 'Расчёты', value: v.calculations ? 3750 : 0 },
         { label: 'Проектная документация', value: v.projectDocs ? 5000 : 0 },
       ];
@@ -124,44 +148,44 @@ const SERVICES = {
 
   practice: {
     label: 'Практика',
-    base: 5990,
-    max: 14990,
+    base: 5000,
+    max: 13500,
     fields: [
       DISCIPLINE_FIELD,
-      { key: 'pages', label: 'Количество страниц', type: 'number', min: 5, max: 60, placeholder: '20', step: 1, hint: '+120 ₽ за страницу' },
+      { key: 'pages', label: 'Количество страниц', type: 'number', min: 5, max: 60, placeholder: '20', step: 1, hint: '+80 ₽ за страницу' },
       { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_MID },
-      { key: 'diary', label: 'Дневник практики', type: 'checkbox', price: 1500 },
-      { key: 'characteristic', label: 'Характеристика', type: 'checkbox', price: 1200 },
+      { key: 'diary', label: 'Дневник практики', type: 'checkbox', price: 1275 },
+      { key: 'characteristic', label: 'Характеристика', type: 'checkbox', price: 1020 },
       {
         key: 'projectDocs',
         label: '+ Доп. материалы к практике — чертежи / макеты / приложения и прочее',
         type: 'checkbox',
-        price: 6000,
+        price: 5100,
         highlight: true,
       },
     ],
     breakdown(v) {
       const pages = Number(v.pages);
       return [
-        { label: `Страницы (${pages} × 120 ₽)`, value: pages * 120 },
-        { label: 'Сложность специализации', value: { simple: 0, medium: 1000, hard: 2500 }[v.specialization] },
-        { label: 'Уникальность', value: { none: 0, standard: 1000, high: 2000 }[v.uniqueness] },
-        { label: 'Срочность', value: { normal: 0, medium: 1200, urgent: 2000, veryUrgent: 3500 }[v.urgency] },
-        { label: 'Дневник практики', value: v.diary ? 1500 : 0 },
-        { label: 'Характеристика', value: v.characteristic ? 1200 : 0 },
-        { label: 'Доп. материалы', value: v.projectDocs ? 6000 : 0 },
+        { label: `Страницы (${pages} × 80 ₽)`, value: pages * 80 },
+        { label: 'Сложность специализации', value: { simple: 0, medium: 800, hard: 1800 }[v.specialization] },
+        { label: 'Уникальность', value: { none: 0, standard: 800, high: 1500 }[v.uniqueness] },
+        { label: 'Срочность', value: { normal: 0, medium: 900, urgent: 1500, veryUrgent: 2600 }[v.urgency] },
+        { label: 'Дневник практики', value: v.diary ? 1275 : 0 },
+        { label: 'Характеристика', value: v.characteristic ? 1020 : 0 },
+        { label: 'Доп. материалы', value: v.projectDocs ? 5100 : 0 },
       ];
     },
   },
 
   referat: {
     label: 'Реферат',
-    base: 4000,
-    max: 8000,
+    base: 2800,
+    max: 7000,
     fields: [
-      { key: 'pages', label: 'Количество страниц', type: 'number', min: 3, max: 40, placeholder: '10', step: 1, hint: '+100 ₽ за страницу' },
+      { key: 'pages', label: 'Количество страниц', type: 'number', min: 3, max: 40, placeholder: '10', step: 1, hint: '+60 ₽ за страницу' },
       { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_SHORT },
@@ -169,20 +193,20 @@ const SERVICES = {
     breakdown(v) {
       const pages = Number(v.pages);
       return [
-        { label: `Страницы (${pages} × 100 ₽)`, value: pages * 100 },
-        { label: 'Сложность специализации', value: { simple: 0, medium: 500, hard: 1200 }[v.specialization] },
-        { label: 'Уникальность', value: { none: 0, standard: 800, high: 1500 }[v.uniqueness] },
-        { label: 'Срочность', value: { normal: 0, medium: 700, urgent: 1500, veryUrgent: 2500 }[v.urgency] },
+        { label: `Страницы (${pages} × 60 ₽)`, value: pages * 60 },
+        { label: 'Сложность специализации', value: { simple: 0, medium: 350, hard: 750 }[v.specialization] },
+        { label: 'Уникальность', value: { none: 0, standard: 500, high: 950 }[v.uniqueness] },
+        { label: 'Срочность', value: { normal: 0, medium: 450, urgent: 950, veryUrgent: 1600 }[v.urgency] },
       ];
     },
   },
 
   control: {
     label: 'Контрольная работа',
-    base: 4000,
-    max: 12000,
+    base: 2800,
+    max: 9000,
     fields: [
-      { key: 'pages', label: 'Количество страниц', type: 'number', min: 3, max: 50, placeholder: '10', step: 1, hint: '+150 ₽ за страницу' },
+      { key: 'pages', label: 'Количество страниц', type: 'number', min: 3, max: 50, placeholder: '10', step: 1, hint: '+90 ₽ за страницу' },
       { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_SHORT },
@@ -191,10 +215,10 @@ const SERVICES = {
     breakdown(v) {
       const pages = Number(v.pages);
       return [
-        { label: `Страницы (${pages} × 150 ₽)`, value: pages * 150 },
-        { label: 'Сложность специализации', value: { simple: 0, medium: 1000, hard: 2500 }[v.specialization] },
-        { label: 'Уникальность', value: { none: 0, standard: 1000, high: 2000 }[v.uniqueness] },
-        { label: 'Срочность', value: { normal: 0, medium: 1000, urgent: 2000, veryUrgent: 3500 }[v.urgency] },
+        { label: `Страницы (${pages} × 90 ₽)`, value: pages * 90 },
+        { label: 'Сложность специализации', value: { simple: 0, medium: 650, hard: 1500 }[v.specialization] },
+        { label: 'Уникальность', value: { none: 0, standard: 650, high: 1250 }[v.uniqueness] },
+        { label: 'Срочность', value: { normal: 0, medium: 650, urgent: 1250, veryUrgent: 2200 }[v.urgency] },
         { label: 'Расчёты', value: v.calculations ? 2000 : 0 },
       ];
     },
@@ -223,40 +247,35 @@ const SERVICES = {
 
   test: {
     label: 'Тест',
-    base: 4000,
-    max: 12000,
+    base: TEST_UNIT_PRICE,
+    max: 35000,
     fields: [
-      {
-        key: 'synergyMti',
-        label: 'Синергия / МТИ — фиксированная цена 990 ₽',
-        type: 'checkbox',
-        price: 990,
-        highlight: true,
-      },
       DISCIPLINE_FIELD,
-      { key: 'testsCount', label: 'Количество тестов', type: 'number', min: 1, max: 30, placeholder: '1', step: 1, hint: '1 тест включён, далее +1 500 ₽ за тест' },
-      { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
-      { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_SHORT },
+      {
+        key: 'testsCount',
+        label: 'Количество тестов',
+        type: 'number',
+        min: 1,
+        max: 30,
+        placeholder: '1',
+        step: 1,
+        hint: '1 070 ₽ за каждый тест (единая цена для всех вузов)',
+      },
     ],
-    override(v) {
-      if (v.synergyMti) return 990;
-      return null;
-    },
     breakdown(v) {
       const testsCount = Number(v.testsCount);
-      const extra = Math.max(0, testsCount - 1);
+      const extra = Math.max(0, testsCount - 1) * TEST_UNIT_PRICE;
+      if (testsCount <= 1) return [];
       return [
-        { label: `Доп. тесты (${extra} × 1 500 ₽)`, value: extra * 1500 },
-        { label: 'Сложность специализации', value: { simple: 0, medium: 1000, hard: 2500 }[v.specialization] },
-        { label: 'Срочность', value: { normal: 0, medium: 500, urgent: 1000, veryUrgent: 2000 }[v.urgency] },
+        { label: `Доп. тесты (${testsCount - 1} × ${TEST_UNIT_PRICE} ₽)`, value: extra },
       ];
     },
   },
 };
 
 const CONSTRUCTOR_KINDS = {
-  diploma: { label: 'ВКР', serviceKey: 'diploma' },
-  coursework: { label: 'Курсовая', serviceKey: 'coursework' },
+  diploma: { label: 'ВКР', preset: 'diploma' },
+  coursework: { label: 'Курсовая', preset: 'coursework' },
   practice: { label: 'Практика', preset: 'practice' },
   test: { label: 'Тест', preset: 'test' },
   aiCleaning: { label: 'Очистка от ИИ', serviceKey: 'aiCleaning' },
@@ -264,11 +283,19 @@ const CONSTRUCTOR_KINDS = {
 };
 
 const PRACTICE_PRESETS = {
-  standard: { label: 'Стандартная практика', price: 5990 },
-  design: { label: 'Практика по дизайну', price: 14990 },
+  standard: { label: 'Стандартная практика', price: 6500 },
+  design: { label: 'Практика по дизайну', price: 16200 },
 };
 
-const TEST_UNIT_PRICE = 990;
+const COURSEWORK_PRESETS = {
+  standard: { label: 'Курсовая МТИ / Синергия', price: 9700 },
+};
+
+const DIPLOMA_PRESETS = {
+  pages_50_60: { label: 'ВКР до 60 стр.', price: 37800 },
+  pages_61_80: { label: 'ВКР 61–80 стр.', price: 43200 },
+  pages_81_100: { label: 'ВКР 81–100 стр.', price: 48600 },
+};
 
 const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
 const fmt = (n) => new Intl.NumberFormat('ru-RU').format(Math.round(n));
@@ -364,7 +391,45 @@ function computeOrderItemPrice(item) {
     }
     const q = clamp(Math.round(qty), 1, 10);
     const preset = PRACTICE_PRESETS[item.values.practiceType || 'standard'];
-    const unit = preset ? preset.price : 5990;
+    const unit = preset ? preset.price : PRACTICE_PRESETS.standard.price;
+    const price = unit * q;
+    const label = withDiscipline(q > 1 ? `${preset.label} × ${q}` : preset.label, item.values);
+    return {
+      price,
+      label,
+      rows: [{ label: `${preset.label} (${q} × ${fmt(unit)} ₽)`, value: price }],
+      incomplete: false,
+    };
+  }
+
+  if (kind.preset === 'coursework') {
+    const qtyRaw = item.values.quantity;
+    const qty = Number(qtyRaw);
+    if (qtyRaw === '' || Number.isNaN(qty) || qty < 1) {
+      return { price: 0, label: kind.label, rows: [], incomplete: true };
+    }
+    const q = clamp(Math.round(qty), 1, 10);
+    const preset = COURSEWORK_PRESETS[item.values.courseworkType || 'standard'];
+    const unit = preset ? preset.price : COURSEWORK_PRESETS.standard.price;
+    const price = unit * q;
+    const label = withDiscipline(q > 1 ? `${preset.label} × ${q}` : preset.label, item.values);
+    return {
+      price,
+      label,
+      rows: [{ label: `${preset.label} (${q} × ${fmt(unit)} ₽)`, value: price }],
+      incomplete: false,
+    };
+  }
+
+  if (kind.preset === 'diploma') {
+    const qtyRaw = item.values.quantity;
+    const qty = Number(qtyRaw);
+    if (qtyRaw === '' || Number.isNaN(qty) || qty < 1) {
+      return { price: 0, label: kind.label, rows: [], incomplete: true };
+    }
+    const q = clamp(Math.round(qty), 1, 5);
+    const preset = DIPLOMA_PRESETS[item.values.diplomaType || 'pages_50_60'];
+    const unit = preset ? preset.price : DIPLOMA_PRESETS.pages_50_60.price;
     const price = unit * q;
     const label = withDiscipline(q > 1 ? `${preset.label} × ${q}` : preset.label, item.values);
     return {
@@ -512,9 +577,7 @@ function renderServiceFields(container, serviceKey, values, onChange) {
       const span = document.createElement('span');
       span.className = 'checkbox-label';
       let priceChip = '';
-      if (f.key === 'synergyMti') {
-        priceChip = ` <em class="chip">${fmt(990)} ₽ итого</em>`;
-      } else if (f.price) {
+      if (f.price) {
         priceChip = ` <em class="chip">+${fmt(f.price)} ₽</em>`;
       }
       span.innerHTML = f.label + priceChip;
@@ -651,6 +714,8 @@ function defaultOrderValues(kind) {
   const cfg = CONSTRUCTOR_KINDS[kind];
   if (cfg.manual) return { title: '', manualPrice: '' };
   if (cfg.preset === 'practice') return { practiceType: 'standard', quantity: '', discipline: '' };
+  if (cfg.preset === 'coursework') return { courseworkType: 'standard', quantity: '', discipline: '' };
+  if (cfg.preset === 'diploma') return { diplomaType: 'pages_50_60', quantity: '', discipline: '' };
   if (cfg.preset === 'test') return { quantity: '', discipline: '' };
   if (cfg.serviceKey) return emptyValues(cfg.serviceKey);
   return {};
@@ -684,33 +749,60 @@ function renderDisciplineField(container, values, onChange) {
   container.appendChild(field);
 }
 
-function renderPracticePresetFields(container, values, onChange) {
-  container.innerHTML = '';
-  renderDisciplineField(container, values, onChange);
-
+function renderPresetTypeFields(container, values, onChange, presets, typeKey, typeLabel, defaultType) {
   const typeField = document.createElement('label');
   typeField.className = 'field';
-  typeField.innerHTML = '<span class="field-label">Тип практики</span>';
+  typeField.innerHTML = `<span class="field-label">${typeLabel}</span>`;
   const typeSelect = document.createElement('select');
   typeSelect.className = 'select';
-  for (const [key, preset] of Object.entries(PRACTICE_PRESETS)) {
+  for (const [key, preset] of Object.entries(presets)) {
     const opt = document.createElement('option');
     opt.value = key;
     opt.textContent = `${preset.label} — ${fmt(preset.price)} ₽`;
     typeSelect.appendChild(opt);
   }
-  typeSelect.value = values.practiceType || 'standard';
+  typeSelect.value = values[typeKey] || defaultType;
   typeSelect.addEventListener('change', () => {
-    values.practiceType = typeSelect.value;
+    values[typeKey] = typeSelect.value;
     onChange();
   });
   typeField.appendChild(typeSelect);
   container.appendChild(typeField);
+}
+
+function renderPracticePresetFields(container, values, onChange) {
+  container.innerHTML = '';
+  renderDisciplineField(container, values, onChange);
+  renderPresetTypeFields(container, values, onChange, PRACTICE_PRESETS, 'practiceType', 'Тип практики', 'standard');
 
   const qtyField = document.createElement('label');
   qtyField.className = 'field';
   qtyField.innerHTML = '<span class="field-label">Количество</span>';
   renderNumberField(qtyField, { key: 'quantity', min: 1, max: 10, step: 1, placeholder: '1' }, values, onChange);
+  container.appendChild(qtyField);
+}
+
+function renderCourseworkPresetFields(container, values, onChange) {
+  container.innerHTML = '';
+  renderDisciplineField(container, values, onChange);
+  renderPresetTypeFields(container, values, onChange, COURSEWORK_PRESETS, 'courseworkType', 'Тип курсовой', 'standard');
+
+  const qtyField = document.createElement('label');
+  qtyField.className = 'field';
+  qtyField.innerHTML = '<span class="field-label">Количество</span>';
+  renderNumberField(qtyField, { key: 'quantity', min: 1, max: 10, step: 1, placeholder: '1' }, values, onChange);
+  container.appendChild(qtyField);
+}
+
+function renderDiplomaPresetFields(container, values, onChange) {
+  container.innerHTML = '';
+  renderDisciplineField(container, values, onChange);
+  renderPresetTypeFields(container, values, onChange, DIPLOMA_PRESETS, 'diplomaType', 'Диапазон страниц', 'pages_50_60');
+
+  const qtyField = document.createElement('label');
+  qtyField.className = 'field';
+  qtyField.innerHTML = '<span class="field-label">Количество</span>';
+  renderNumberField(qtyField, { key: 'quantity', min: 1, max: 5, step: 1, placeholder: '1' }, values, onChange);
   container.appendChild(qtyField);
 }
 
@@ -774,6 +866,10 @@ function renderOrderItemCard(item) {
     renderCustomFields(fieldsWrap, item.values, onChange);
   } else if (cfg.preset === 'practice') {
     renderPracticePresetFields(fieldsWrap, item.values, onChange);
+  } else if (cfg.preset === 'coursework') {
+    renderCourseworkPresetFields(fieldsWrap, item.values, onChange);
+  } else if (cfg.preset === 'diploma') {
+    renderDiplomaPresetFields(fieldsWrap, item.values, onChange);
   } else if (cfg.preset === 'test') {
     renderTestPresetFields(fieldsWrap, item.values, onChange);
   } else if (cfg.serviceKey) {
