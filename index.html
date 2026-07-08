@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Калькулятор стоимости студенческих работ</title>
+  <title>Калькулятор для менеджеров — Никольский Помощь</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Onest:wght@400;600;700&family=Play:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -16,12 +16,8 @@
         <div class="brand-logo">Н</div>
         <div>
           <div class="brand-title">Никольский Помощь</div>
-          <div class="brand-sub">Калькулятор стоимости работ</div>
+          <div class="brand-sub">Калькулятор для менеджеров</div>
         </div>
-      </div>
-      <div class="header-contacts">
-        <a class="header-phone" href="tel:+74954870177">8 (495) 487-01-77</a>
-        <div class="header-note">Для звонков по России · 8:00–20:00</div>
       </div>
     </div>
   </header>
@@ -30,18 +26,16 @@
     <div class="tabs-row">
       <nav class="tabs" role="tablist">
         <button class="tab active" data-mode="main" role="tab">Основной калькулятор</button>
-        <button class="tab" data-mode="university" role="tab">МТИ / Синергия — ВКР</button>
+        <button class="tab" data-mode="university" role="tab">МТИ / Синергия — конструктор</button>
       </nav>
     </div>
 
-    <!-- ГЛАВНЫЙ КАЛЬКУЛЯТОР -->
     <section id="mode-main" class="mode active">
       <div class="calc-grid">
-        <!-- Левая колонка: форма -->
         <div class="panel form-panel">
           <div class="panel-head">
             <h2>Параметры заказа</h2>
-            <p class="muted">Выберите тип работы и заполните параметры — цена пересчитается автоматически.</p>
+            <p class="muted">Заполните все обязательные поля — цена пересчитается автоматически.</p>
           </div>
 
           <label class="field">
@@ -52,7 +46,6 @@
           <div id="fields-container" class="fields"></div>
         </div>
 
-        <!-- Правая колонка: результат -->
         <aside class="panel result-panel">
           <div class="result-sticky">
             <div class="result-head">
@@ -65,7 +58,7 @@
             </div>
 
             <div class="breakdown">
-              <div class="breakdown-title">Из чего складывается цена</div>
+              <div class="breakdown-title">Расшифровка</div>
               <ul id="breakdown-list"></ul>
             </div>
 
@@ -74,62 +67,54 @@
               <strong><span id="price-value-2">0</span> ₽</strong>
             </div>
 
-            <button id="order-btn" class="btn-primary">Оформить заказ</button>
-            <p class="disclaimer muted">Цена предварительная. Точная стоимость подтверждается после уточнения деталей.</p>
+            <button type="button" id="btn-invoice-main" class="btn-primary">Скачать счёт (.docx)</button>
           </div>
         </aside>
       </div>
     </section>
 
-    <!-- КАЛЬКУЛЯТОР МТИ / СИНЕРГИЯ -->
     <section id="mode-university" class="mode">
       <div class="calc-grid">
         <div class="panel form-panel">
           <div class="panel-head">
-            <h2>ВКР — МТИ / Синергия</h2>
-            <p class="muted">Стоимость выпускной квалификационной работы по уровню образования и сложности.</p>
+            <h2>Конструктор заказа — МТИ / Синергия</h2>
+            <p class="muted">Добавьте позиции, укажите параметры — итог посчитается автоматически.</p>
           </div>
 
-          <label class="field">
-            <span class="field-label">Уровень образования</span>
-            <select id="uni-level" class="select">
-              <option value="college">Колледж</option>
-              <option value="bachelor">Бакалавр / специалист</option>
-              <option value="master">Магистр</option>
-            </select>
-          </label>
+          <div class="constructor-toolbar">
+            <span class="constructor-toolbar-label">Добавить в заказ</span>
+            <button type="button" class="btn-secondary" data-add="diploma">+ ВКР</button>
+            <button type="button" class="btn-secondary" data-add="coursework">+ Курсовая</button>
+            <button type="button" class="btn-secondary" data-add="practice">+ Практика</button>
+            <button type="button" class="btn-secondary" data-add="test">+ Тест</button>
+            <button type="button" class="btn-secondary" data-add="aiCleaning">+ Очистка от ИИ</button>
+            <button type="button" class="btn-secondary" data-add="custom">+ Своя позиция</button>
+          </div>
 
-          <label class="field">
-            <span class="field-label">Сложность работы</span>
-            <select id="uni-complexity" class="select">
-              <option value="simple">Простая</option>
-              <option value="hard">Сложная</option>
-            </select>
-          </label>
-
-          <div class="matrix-hint">
-            <div class="matrix-title">Тарифная матрица</div>
-            <table class="matrix-table">
-              <thead>
-                <tr><th>ВКР</th><th>Колледж</th><th>Бакалавр</th><th>Магистр</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>Простая</td><td>35 000 ₽</td><td>42 000 ₽</td><td>47 000 ₽</td></tr>
-                <tr><td>Сложная</td><td>45 000 ₽</td><td>52 000 ₽</td><td>60 000 ₽</td></tr>
-              </tbody>
-            </table>
+          <div id="order-items" class="order-items">
+            <div id="order-empty" class="order-empty">Нет позиций. Нажмите «+» выше.</div>
           </div>
         </div>
 
         <aside class="panel result-panel">
           <div class="result-sticky">
             <div class="result-head">
-              <span class="muted">Стоимость ВКР</span>
+              <span class="muted">Итого по заказу</span>
             </div>
-            <div class="price-big"><span id="uni-price">35 000</span> <span class="cur">₽</span></div>
-            <div id="uni-desc" class="price-range muted"></div>
-            <button class="btn-primary">Оформить заказ</button>
-            <p class="disclaimer muted">Цена предварительная. Точная стоимость подтверждается после уточнения деталей.</p>
+            <div class="price-big"><span id="order-total">0</span> <span class="cur">₽</span></div>
+            <div id="order-desc" class="price-range muted">0 позиций</div>
+
+            <div class="breakdown constructor-summary">
+              <div class="breakdown-title">Состав заказа</div>
+              <ul id="order-breakdown"></ul>
+            </div>
+
+            <div class="result-total-row">
+              <span>Итого</span>
+              <strong><span id="order-total-2">0</span> ₽</strong>
+            </div>
+
+            <button type="button" id="btn-invoice-order" class="btn-primary">Скачать счёт (.docx)</button>
           </div>
         </aside>
       </div>
@@ -137,9 +122,11 @@
   </main>
 
   <footer class="site-footer">
-    <div class="container muted">© 2012—<span id="year"></span> Никольский Помощь · Калькулятор стоимости работ. Цены предварительные.</div>
+    <div class="container muted">Внутренний калькулятор · Никольский Помощь</div>
   </footer>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="invoice.js"></script>
   <script src="calculator.js"></script>
 </body>
 </html>
