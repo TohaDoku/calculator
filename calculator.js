@@ -2,10 +2,15 @@
 
 const PLACEHOLDER_OPTION = { value: '', label: '— выберите —' };
 const VKR_PAGES_ANCHOR = 60;
-const VKR_PAGE_RATE_HARD = 250;
-const VKR_PAGE_RATE_SOFT = 200;
-const PROJECT_DOCS_VKR = 10000;
-const TEST_UNIT_PRICE = 1070;
+const VKR_PAGE_RATE_HARD = 225;
+const VKR_PAGE_RATE_SOFT = 180;
+const PROJECT_DOCS_VKR = 9000;
+const UNIVERSITY_VKR_BASE = 29990;
+const UNIVERSITY_VKR_MAX = 90000;
+const UNIVERSITY_VKR_PAGE_RATE_HARD = 210;
+const UNIVERSITY_VKR_PAGE_RATE_SOFT = 170;
+const PROJECT_DOCS_UNIVERSITY_VKR = 7500;
+const TEST_UNIT_PRICE = 990;
 
 function vkrPageRate(spec) {
   return spec === 'hard' ? VKR_PAGE_RATE_HARD : VKR_PAGE_RATE_SOFT;
@@ -15,17 +20,39 @@ function vkrUrgencySurcharge(spec, urgency) {
   const hard = spec === 'hard';
   return {
     normal: 0,
-    medium: hard ? 7000 : 4000,
-    urgent: hard ? 15000 : 8000,
-    veryUrgent: hard ? 25000 : 14000,
+    medium: hard ? 6300 : 3600,
+    urgent: hard ? 13500 : 7200,
+    veryUrgent: hard ? 22500 : 12600,
   }[urgency] || 0;
 }
 
 function vkrUniquenessSurcharge(spec, uniqueness) {
   if (spec === 'simple') {
-    return { none: 0, standard: 5500, high: 12000 }[uniqueness] || 0;
+    return { none: 0, standard: 4950, high: 10800 }[uniqueness] || 0;
   }
-  return { none: 0, standard: 7000, high: 15000 }[uniqueness] || 0;
+  return { none: 0, standard: 6300, high: 13500 }[uniqueness] || 0;
+}
+
+function universityVkrPageRate(spec) {
+  return spec === 'hard' ? UNIVERSITY_VKR_PAGE_RATE_HARD : UNIVERSITY_VKR_PAGE_RATE_SOFT;
+}
+
+function universityVkrUrgencySurcharge(spec, urgency) {
+  const tariffs = {
+    simple: { normal: 0, medium: 2500, urgent: 5200, veryUrgent: 9000 },
+    medium: { normal: 0, medium: 3200, urgent: 6500, veryUrgent: 11000 },
+    hard: { normal: 0, medium: 5200, urgent: 10500, veryUrgent: 17500 },
+  };
+  return (tariffs[spec] || tariffs.simple)[urgency] || 0;
+}
+
+function universityVkrUniquenessSurcharge(spec, uniqueness) {
+  const tariffs = {
+    simple: { none: 0, standard: 3900, high: 8500 },
+    medium: { none: 0, standard: 4800, high: 9900 },
+    hard: { none: 0, standard: 5800, high: 12000 },
+  };
+  return (tariffs[spec] || tariffs.simple)[uniqueness] || 0;
 }
 
 const SPEC_STD = [
@@ -91,22 +118,22 @@ const DISCIPLINE_FIELD = {
 const SERVICES = {
   diploma: {
     label: 'Дипломная / ВКР',
-    base: 35000,
-    max: 120000,
+    base: 31500,
+    max: 108000,
     fields: [
-      { key: 'pages', label: 'Количество страниц', type: 'number', min: 30, max: 100, placeholder: '60', step: 1, hint: 'База за 60 стр.; типичный диапазон 50–80 стр.; ±200–250 ₽ за каждую стр. от 60' },
+      { key: 'pages', label: 'Количество страниц', type: 'number', min: 30, max: 100, placeholder: '60', step: 1, hint: 'База за 60 стр.; типичный диапазон 50–80 стр.; ±180–225 ₽ за каждую стр. от 60' },
       { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_VKR },
-      { key: 'presentation', label: 'Нужна презентация', type: 'checkbox', price: 2500 },
-      { key: 'speech', label: 'Нужна речь к защите', type: 'checkbox', price: 1500 },
+      { key: 'presentation', label: 'Нужна презентация', type: 'checkbox', price: 2250 },
+      { key: 'speech', label: 'Нужна речь к защите', type: 'checkbox', price: 1350 },
       { ...PROJECT_DOCS_FIELD, price: PROJECT_DOCS_VKR },
     ],
     breakdown(v) {
       const pages = Number(v.pages);
       const pageRate = vkrPageRate(v.specialization);
       const pagesDelta = (pages - VKR_PAGES_ANCHOR) * pageRate;
-      const spec = { simple: 0, medium: 7000, hard: 15000 }[v.specialization];
+      const spec = { simple: 0, medium: 6300, hard: 13500 }[v.specialization];
       const uniq = vkrUniquenessSurcharge(v.specialization, v.uniqueness);
       const urg = vkrUrgencySurcharge(v.specialization, v.urgency);
       return [
@@ -114,17 +141,51 @@ const SERVICES = {
         { label: 'Сложность специализации', value: spec },
         { label: 'Уникальность', value: uniq },
         { label: 'Срочность', value: urg },
-        { label: 'Презентация', value: v.presentation ? 2500 : 0 },
-        { label: 'Речь к защите', value: v.speech ? 1500 : 0 },
+        { label: 'Презентация', value: v.presentation ? 2250 : 0 },
+        { label: 'Речь к защите', value: v.speech ? 1350 : 0 },
         { label: 'Проектная документация', value: v.projectDocs ? PROJECT_DOCS_VKR : 0 },
+      ];
+    },
+  },
+
+  universityDiploma: {
+    label: 'ВКР МТИ / Синергия',
+    base: UNIVERSITY_VKR_BASE,
+    max: UNIVERSITY_VKR_MAX,
+    hidden: true,
+    fields: [
+      DISCIPLINE_FIELD,
+      { key: 'pages', label: 'Количество страниц', type: 'number', min: 30, max: 100, placeholder: '60', step: 1, hint: 'База 29 990 ₽ за 60 стр.; ±170–210 ₽ за каждую стр. от 60' },
+      { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
+      { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
+      { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_VKR },
+      { key: 'presentation', label: 'Нужна презентация', type: 'checkbox', price: 2250 },
+      { key: 'speech', label: 'Нужна речь к защите', type: 'checkbox', price: 1350 },
+      { ...PROJECT_DOCS_FIELD, price: PROJECT_DOCS_UNIVERSITY_VKR },
+    ],
+    breakdown(v) {
+      const pages = Number(v.pages);
+      const pageRate = universityVkrPageRate(v.specialization);
+      const pagesDelta = (pages - VKR_PAGES_ANCHOR) * pageRate;
+      const spec = { simple: 0, medium: 4500, hard: 11000 }[v.specialization];
+      const uniq = universityVkrUniquenessSurcharge(v.specialization, v.uniqueness);
+      const urg = universityVkrUrgencySurcharge(v.specialization, v.urgency);
+      return [
+        { label: `Корректировка страниц (${pages} − ${VKR_PAGES_ANCHOR}) × ${pageRate} ₽`, value: pagesDelta },
+        { label: 'Сложность специализации', value: spec },
+        { label: 'Уникальность', value: uniq },
+        { label: 'Срочность', value: urg },
+        { label: 'Презентация', value: v.presentation ? 2250 : 0 },
+        { label: 'Речь к защите', value: v.speech ? 1350 : 0 },
+        { label: 'Проектная документация', value: v.projectDocs ? PROJECT_DOCS_UNIVERSITY_VKR : 0 },
       ];
     },
   },
 
   coursework: {
     label: 'Курсовая',
-    base: 4500,
-    max: 16000,
+    base: 4400,
+    max: 9900,
     fields: [
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 5, max: 60, placeholder: '20', step: 1, hint: '+100 ₽ за страницу' },
       { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
@@ -137,9 +198,9 @@ const SERVICES = {
       const pages = Number(v.pages);
       return [
         { label: `Страницы (${pages} × 100 ₽)`, value: pages * 100 },
-        { label: 'Сложность специализации', value: { simple: 0, medium: 1200, hard: 3000 }[v.specialization] },
-        { label: 'Уникальность', value: { none: 0, standard: 1400, high: 3200 }[v.uniqueness] },
-        { label: 'Срочность', value: { normal: 0, medium: 1100, urgent: 2700, veryUrgent: 4800 }[v.urgency] },
+        { label: 'Сложность специализации', value: { simple: 0, medium: 1100, hard: 2700 }[v.specialization] },
+        { label: 'Уникальность', value: { none: 0, standard: 1300, high: 2900 }[v.uniqueness] },
+        { label: 'Срочность', value: { normal: 0, medium: 1000, urgent: 2400, veryUrgent: 4300 }[v.urgency] },
         { label: 'Расчёты', value: v.calculations ? 3750 : 0 },
         { label: 'Проектная документация', value: v.projectDocs ? 5000 : 0 },
       ];
@@ -149,7 +210,7 @@ const SERVICES = {
   practice: {
     label: 'Практика',
     base: 5000,
-    max: 13500,
+    max: 13200,
     fields: [
       DISCIPLINE_FIELD,
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 5, max: 60, placeholder: '20', step: 1, hint: '+80 ₽ за страницу' },
@@ -182,8 +243,8 @@ const SERVICES = {
 
   referat: {
     label: 'Реферат',
-    base: 2800,
-    max: 7000,
+    base: 2700,
+    max: 5500,
     fields: [
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 3, max: 40, placeholder: '10', step: 1, hint: '+60 ₽ за страницу' },
       { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
@@ -203,8 +264,8 @@ const SERVICES = {
 
   control: {
     label: 'Контрольная работа',
-    base: 2800,
-    max: 9000,
+    base: 2700,
+    max: 5500,
     fields: [
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 3, max: 50, placeholder: '10', step: 1, hint: '+90 ₽ за страницу' },
       { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
@@ -259,7 +320,7 @@ const SERVICES = {
         max: 30,
         placeholder: '1',
         step: 1,
-        hint: '1 070 ₽ за каждый тест (единая цена для всех вузов)',
+        hint: '990 ₽ за каждый тест (единая цена для всех вузов)',
       },
     ],
     breakdown(v) {
@@ -274,7 +335,7 @@ const SERVICES = {
 };
 
 const CONSTRUCTOR_KINDS = {
-  diploma: { label: 'ВКР', preset: 'diploma' },
+  diploma: { label: 'ВКР', serviceKey: 'universityDiploma' },
   coursework: { label: 'Курсовая', preset: 'coursework' },
   practice: { label: 'Практика', preset: 'practice' },
   test: { label: 'Тест', preset: 'test' },
@@ -284,17 +345,11 @@ const CONSTRUCTOR_KINDS = {
 
 const PRACTICE_PRESETS = {
   standard: { label: 'Стандартная практика', price: 6500 },
-  design: { label: 'Практика по дизайну', price: 16200 },
+  design: { label: 'Практика по дизайну', price: 13200 },
 };
 
 const COURSEWORK_PRESETS = {
-  standard: { label: 'Курсовая МТИ / Синергия', price: 9700 },
-};
-
-const DIPLOMA_PRESETS = {
-  pages_50_60: { label: 'ВКР до 60 стр.', price: 37800 },
-  pages_61_80: { label: 'ВКР 61–80 стр.', price: 43200 },
-  pages_81_100: { label: 'ВКР 81–100 стр.', price: 48600 },
+  standard: { label: 'Курсовая МТИ / Синергия', price: 9900 },
 };
 
 const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
@@ -411,25 +466,6 @@ function computeOrderItemPrice(item) {
     const q = clamp(Math.round(qty), 1, 10);
     const preset = COURSEWORK_PRESETS[item.values.courseworkType || 'standard'];
     const unit = preset ? preset.price : COURSEWORK_PRESETS.standard.price;
-    const price = unit * q;
-    const label = withDiscipline(q > 1 ? `${preset.label} × ${q}` : preset.label, item.values);
-    return {
-      price,
-      label,
-      rows: [{ label: `${preset.label} (${q} × ${fmt(unit)} ₽)`, value: price }],
-      incomplete: false,
-    };
-  }
-
-  if (kind.preset === 'diploma') {
-    const qtyRaw = item.values.quantity;
-    const qty = Number(qtyRaw);
-    if (qtyRaw === '' || Number.isNaN(qty) || qty < 1) {
-      return { price: 0, label: kind.label, rows: [], incomplete: true };
-    }
-    const q = clamp(Math.round(qty), 1, 5);
-    const preset = DIPLOMA_PRESETS[item.values.diplomaType || 'pages_50_60'];
-    const unit = preset ? preset.price : DIPLOMA_PRESETS.pages_50_60.price;
     const price = unit * q;
     const label = withDiscipline(q > 1 ? `${preset.label} × ${q}` : preset.label, item.values);
     return {
@@ -659,6 +695,7 @@ function initServiceSelect() {
   const sel = $('#service-select');
   sel.innerHTML = '';
   for (const [key, svc] of Object.entries(SERVICES)) {
+    if (svc.hidden) continue;
     const opt = document.createElement('option');
     opt.value = key;
     opt.textContent = svc.label;
@@ -715,7 +752,6 @@ function defaultOrderValues(kind) {
   if (cfg.manual) return { title: '', manualPrice: '' };
   if (cfg.preset === 'practice') return { practiceType: 'standard', quantity: '', discipline: '' };
   if (cfg.preset === 'coursework') return { courseworkType: 'standard', quantity: '', discipline: '' };
-  if (cfg.preset === 'diploma') return { diplomaType: 'pages_50_60', quantity: '', discipline: '' };
   if (cfg.preset === 'test') return { quantity: '', discipline: '' };
   if (cfg.serviceKey) return emptyValues(cfg.serviceKey);
   return {};
@@ -794,18 +830,6 @@ function renderCourseworkPresetFields(container, values, onChange) {
   container.appendChild(qtyField);
 }
 
-function renderDiplomaPresetFields(container, values, onChange) {
-  container.innerHTML = '';
-  renderDisciplineField(container, values, onChange);
-  renderPresetTypeFields(container, values, onChange, DIPLOMA_PRESETS, 'diplomaType', 'Диапазон страниц', 'pages_50_60');
-
-  const qtyField = document.createElement('label');
-  qtyField.className = 'field';
-  qtyField.innerHTML = '<span class="field-label">Количество</span>';
-  renderNumberField(qtyField, { key: 'quantity', min: 1, max: 5, step: 1, placeholder: '1' }, values, onChange);
-  container.appendChild(qtyField);
-}
-
 function renderTestPresetFields(container, values, onChange) {
   container.innerHTML = '';
   renderDisciplineField(container, values, onChange);
@@ -868,8 +892,6 @@ function renderOrderItemCard(item) {
     renderPracticePresetFields(fieldsWrap, item.values, onChange);
   } else if (cfg.preset === 'coursework') {
     renderCourseworkPresetFields(fieldsWrap, item.values, onChange);
-  } else if (cfg.preset === 'diploma') {
-    renderDiplomaPresetFields(fieldsWrap, item.values, onChange);
   } else if (cfg.preset === 'test') {
     renderTestPresetFields(fieldsWrap, item.values, onChange);
   } else if (cfg.serviceKey) {
