@@ -1019,8 +1019,6 @@ function recalcMain() {
 
   $('#price-value').textContent = fmt(result.price);
   $('#price-value-2').textContent = fmt(result.price);
-  $('#price-min').textContent = fmt(fullPaymentPrice(svc.base));
-  $('#price-max').textContent = fmt(fullPaymentPrice(svc.max));
 
   renderBreakdownList($('#breakdown-list'), currentService, result);
   renderPriceInfo('main', result.incomplete ? 0 : result.price, result.fullPrice, managerGuidance(values));
