@@ -441,6 +441,7 @@ function paymentInfo(discountedPrice, fullPrice) {
     return {
       discountPrice: 0,
       discountText: 'Скидка 7% при полной оплате появится после расчёта.',
+      underPriceText: '',
       partsText: 'Схема оплаты появится после расчёта.',
       lastChanceText: '',
     };
@@ -458,7 +459,8 @@ function paymentInfo(discountedPrice, fullPrice) {
     fullPrice: amount,
     discountAmount: amount - discounted,
     discountText: `Скидка 7% при оплате сразу: −${fmt(amount - discounted)} ₽.`,
-    partsText: `При оплате частями: ${fmt(amount)} ₽. ${partsText}`,
+    underPriceText: `При оплате частями: ${fmt(amount)} ₽`,
+    partsText: `Цена при оплате частями: ${fmt(amount)} ₽. ${partsText}`,
     lastChanceText: `Скидка последней надежды 10%: ${fmt(discounted * (1 - LAST_CHANCE_DISCOUNT))} ₽, если клиент решил подумать или не отвечает 2 часа.`,
   };
 }
@@ -486,7 +488,10 @@ function renderPriceInfo(prefix, discountedPrice, fullPrice, guidanceText) {
   }
 
   const info = paymentInfo(discountedPrice, fullPrice);
-  setInfoBlock(discountEl, info.discountText);
+  setInfoBlock(discountEl, `
+    <span class="installment-under-price">${info.underPriceText}</span>
+    <span class="discount-line">${info.discountText}</span>
+  `);
   setInfoBlock(paymentEl, `<span>${info.partsText}</span>`);
   setInfoBlock(lastChanceEl, `<span>${info.lastChanceText}</span>`);
   setInfoBlock(guidanceEl, guidanceText ? `<strong>Аргументы менеджеру</strong><span>${guidanceText}</span>` : '');
@@ -504,6 +509,7 @@ function renderPaymentInfo(el, discountedPrice, fullPrice, guidanceText) {
   const info = paymentInfo(discountedPrice, fullPrice);
   const guidance = guidanceText ? `<span>${guidanceText}</span>` : '';
   el.innerHTML = `
+    <span>${info.underPriceText}</span>
     <span><strong>${info.discountText}</strong></span>
     <span>${info.partsText}</span>
     <span>${info.lastChanceText}</span>

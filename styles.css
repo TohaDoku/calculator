@@ -317,12 +317,15 @@ main { padding: 20px 0 60px; }
 }
 .price-big .cur { color: var(--muted); font-size: 24px; font-family: 'Onest', sans-serif; }
 .discount-info {
+  display: grid;
+  gap: 4px;
   margin: 4px 0 10px;
-  color: #2e7d32;
   font-size: 13px;
   font-weight: 700;
 }
 .discount-info.hidden { display: none; }
+.installment-under-price { color: var(--text); }
+.discount-line { color: #2e7d32; }
 .price-range { font-size: 13px; margin-bottom: 16px; }
 .payment-info {
   display: grid;
