@@ -131,12 +131,12 @@ function fullPaymentPrice(fullPrice) {
 }
 
 const SPECIALTIES = [
-  { value: 'humanities', label: 'Гуманитарная' },
-  { value: 'natural', label: 'Естественная' },
-  { value: 'economics', label: 'Экономика' },
-  { value: 'programming', label: 'Программирование' },
-  { value: 'technical', label: 'Инженерная / техническая' },
-  { value: 'construction', label: 'Строительство' },
+  { value: 'humanities', label: 'Гуманитарная', icon: '📚' },
+  { value: 'natural', label: 'Естественная', icon: '🔬' },
+  { value: 'economics', label: 'Экономика', icon: '📊' },
+  { value: 'programming', label: 'Программирование', icon: '💻' },
+  { value: 'technical', label: 'Инженерная / техническая', icon: '⚙️' },
+  { value: 'construction', label: 'Строительство', icon: '🏗️' },
 ];
 
 const UNIQ_STD = [
@@ -152,7 +152,7 @@ const UNIQ_AI = [
 ];
 
 const URG_VKR = [
-  { value: 'normal', label: 'Стандартно — 4 недели' },
+  { value: 'normal', label: 'Стандартно — 4+ недели' },
   { value: 'medium', label: 'Немного срочно — 3–4 недели' },
   { value: 'urgent', label: 'Срочно — 1–2 недели' },
   { value: 'veryUrgent', label: 'Очень срочно — менее 1 недели' },
@@ -194,7 +194,7 @@ const SERVICES = {
     max: 120000,
     fields: [
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 30, max: 100, placeholder: '60', step: 1, hint: 'База за 60 стр.; типичный диапазон 50–80 стр.; ±200–250 ₽ за каждую стр. от 60' },
-      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
+      { key: 'specialization', label: 'Специальность', type: 'specialtyChoice', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_VKR },
       { key: 'presentation', label: 'Нужна презентация', type: 'addonChoice', price: 2500 },
@@ -230,7 +230,7 @@ const SERVICES = {
     fields: [
       DISCIPLINE_FIELD,
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 30, max: 100, placeholder: '60', step: 1, hint: 'База 29 990 ₽ за 60 стр.; ±170–210 ₽ за каждую стр. от 60' },
-      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
+      { key: 'specialization', label: 'Специальность', type: 'specialtyChoice', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_VKR },
       { key: 'presentation', label: 'Нужна презентация', type: 'addonChoice', price: 2250 },
@@ -264,7 +264,7 @@ const SERVICES = {
     max: 19990,
     fields: [
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 5, max: 60, placeholder: '20', step: 1, hint: '+100 ₽ за страницу' },
-      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
+      { key: 'specialization', label: 'Специальность', type: 'specialtyChoice', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_MID },
       { key: 'calculations', label: 'Нужны расчёты', type: 'checkbox', price: 3750 },
@@ -290,7 +290,7 @@ const SERVICES = {
     fields: [
       DISCIPLINE_FIELD,
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 5, max: 60, placeholder: '20', step: 1, hint: '+80 ₽ за страницу' },
-      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
+      { key: 'specialization', label: 'Специальность', type: 'specialtyChoice', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_MID },
       { key: 'diary', label: 'Дневник практики', type: 'checkbox', price: 1275 },
@@ -323,7 +323,7 @@ const SERVICES = {
     max: 5500,
     fields: [
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 3, max: 40, placeholder: '10', step: 1, hint: '+60 ₽ за страницу' },
-      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
+      { key: 'specialization', label: 'Специальность', type: 'specialtyChoice', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_SHORT },
     ],
@@ -344,7 +344,7 @@ const SERVICES = {
     max: 5500,
     fields: [
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 3, max: 50, placeholder: '10', step: 1, hint: '+90 ₽ за страницу' },
-      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
+      { key: 'specialization', label: 'Специальность', type: 'specialtyChoice', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_SHORT },
       { key: 'calculations', label: 'Есть расчёты', type: 'checkbox', price: 2000 },
@@ -367,7 +367,7 @@ const SERVICES = {
     max: 12000,
     fields: [
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 3, max: 80, placeholder: '10', step: 1, hint: '+80 ₽ за страницу' },
-      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
+      { key: 'specialization', label: 'Специальность', type: 'specialtyChoice', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Задача по ИИ', type: 'select', options: UNIQ_AI },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_SHORT },
     ],
@@ -456,10 +456,40 @@ function paymentInfo(discountedPrice, fullPrice) {
   return {
     discountPrice: discounted,
     fullPrice: amount,
-    discountText: `Цена при полной оплате со скидкой 7%: ${fmt(discounted)} ₽.`,
-    partsText: `При оплате частями цена без скидки: ${fmt(amount)} ₽. ${partsText}`,
+    discountAmount: amount - discounted,
+    discountText: `Скидка 7% при оплате сразу: −${fmt(amount - discounted)} ₽.`,
+    partsText: `При оплате частями: ${fmt(amount)} ₽. ${partsText}`,
     lastChanceText: `Скидка последней надежды 10%: ${fmt(discounted * (1 - LAST_CHANCE_DISCOUNT))} ₽, если клиент решил подумать или не отвечает 2 часа.`,
   };
+}
+
+function setInfoBlock(el, html) {
+  if (!el) return;
+  if (!html) {
+    el.classList.add('hidden');
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+}
+
+function renderPriceInfo(prefix, discountedPrice, fullPrice, guidanceText) {
+  const discountEl = $(`#discount-info-${prefix}`);
+  const paymentEl = $(`#payment-info-${prefix}`);
+  const lastChanceEl = $(`#last-chance-${prefix}`);
+  const guidanceEl = $(`#manager-guidance-${prefix}`);
+
+  if (discountedPrice <= 0) {
+    [discountEl, paymentEl, lastChanceEl, guidanceEl].forEach((el) => setInfoBlock(el, ''));
+    return;
+  }
+
+  const info = paymentInfo(discountedPrice, fullPrice);
+  setInfoBlock(discountEl, info.discountText);
+  setInfoBlock(paymentEl, `<span>${info.partsText}</span>`);
+  setInfoBlock(lastChanceEl, `<span>${info.lastChanceText}</span>`);
+  setInfoBlock(guidanceEl, guidanceText ? `<strong>Аргументы менеджеру</strong><span>${guidanceText}</span>` : '');
 }
 
 function renderPaymentInfo(el, discountedPrice, fullPrice, guidanceText) {
@@ -555,7 +585,7 @@ function isFormComplete(serviceKey, values) {
   }
   for (const f of svc.fields) {
     if (f.optional || f.type === 'checkbox') continue;
-    if (f.type === 'select') {
+    if (f.type === 'select' || f.type === 'specialtyChoice') {
       if (!values[f.key]) return false;
     } else if (f.type === 'addonChoice') {
       if (values[f.key] !== 'yes' && values[f.key] !== 'no') return false;
@@ -820,6 +850,32 @@ function renderAddonChoiceField(wrap, f, values, onChange) {
   wrap.appendChild(buttons);
 }
 
+function renderSpecialtyChoiceField(wrap, f, values, onChange) {
+  const grid = document.createElement('div');
+  grid.className = 'specialty-choice-grid';
+
+  for (const o of f.options) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'specialty-choice-card';
+    btn.innerHTML = `
+      <span class="specialty-choice-icon">${o.icon || ''}</span>
+      <span class="specialty-choice-text">${o.label}</span>
+    `;
+    btn.classList.toggle('active', values[f.key] === o.value);
+    btn.addEventListener('click', () => {
+      values[f.key] = o.value;
+      grid.querySelectorAll('.specialty-choice-card').forEach((el) => {
+        el.classList.toggle('active', el === btn);
+      });
+      onChange();
+    });
+    grid.appendChild(btn);
+  }
+
+  wrap.appendChild(grid);
+}
+
 function renderServiceFields(container, serviceKey, values, onChange) {
   const svc = SERVICES[serviceKey];
   container.innerHTML = '';
@@ -867,6 +923,8 @@ function renderServiceFields(container, serviceKey, values, onChange) {
 
       if (f.type === 'number') {
         renderNumberField(wrap, f, values, onChange);
+      } else if (f.type === 'specialtyChoice') {
+        renderSpecialtyChoiceField(wrap, f, values, onChange);
       } else if (f.type === 'select') {
         const select = document.createElement('select');
         select.className = 'select';
@@ -965,7 +1023,7 @@ function recalcMain() {
   $('#price-max').textContent = fmt(fullPaymentPrice(svc.max));
 
   renderBreakdownList($('#breakdown-list'), currentService, result);
-  renderPaymentInfo($('#payment-info-main'), result.incomplete ? 0 : result.price, result.fullPrice, managerGuidance(values));
+  renderPriceInfo('main', result.incomplete ? 0 : result.price, result.fullPrice, managerGuidance(values));
 
   const badge = $('#clamp-badge');
   if (result.incomplete) {
@@ -1201,7 +1259,15 @@ function recalcOrder() {
 
   $('#order-total').textContent = fmt(total);
   $('#order-total-2').textContent = fmt(total);
-  renderPaymentInfo($('#payment-info-order'), total, fullTotal);
+  const guidance = orderItems
+    .map((item) => {
+      const kind = CONSTRUCTOR_KINDS[item.kind];
+      if (!kind || !kind.serviceKey) return '';
+      return managerGuidance(item.values);
+    })
+    .filter(Boolean)
+    .join(' ');
+  renderPriceInfo('order', total, fullTotal, guidance);
   const n = orderItems.length;
   const word = n === 1 ? 'позиция' : n >= 2 && n <= 4 ? 'позиции' : 'позиций';
   $('#order-desc').textContent = n ? `${n} ${word} в заказе` : '0 позиций';
