@@ -5,19 +5,80 @@ const VKR_PAGES_ANCHOR = 60;
 const VKR_PAGE_RATE_HARD = 250;
 const VKR_PAGE_RATE_SOFT = 200;
 const PROJECT_DOCS_VKR = 10000;
-const UNIVERSITY_VKR_BASE = 29990;
+const FULL_PAYMENT_DISCOUNT = 0.07;
+const LAST_CHANCE_DISCOUNT = 0.10;
 const UNIVERSITY_VKR_MAX = 90000;
 const UNIVERSITY_VKR_PAGE_RATE_HARD = 210;
 const UNIVERSITY_VKR_PAGE_RATE_SOFT = 170;
-const PROJECT_DOCS_UNIVERSITY_VKR = 7500;
+const PROJECT_DOCS_UNIVERSITY_VKR = 10000;
 const TEST_UNIT_PRICE = 990;
 
-function vkrPageRate(spec) {
-  return spec === 'hard' ? VKR_PAGE_RATE_HARD : VKR_PAGE_RATE_SOFT;
+const inflateFromFullPayment = (target) => Math.round(target / (1 - FULL_PAYMENT_DISCOUNT));
+
+const VKR_TARGETS_MAIN = {
+  humanities: 44990,
+  natural: 48990,
+  economics: 49990,
+  programming: 54990,
+  technical: 57990,
+  construction: 69990,
+};
+
+const VKR_TARGETS_UNIVERSITY = {
+  humanities: 41990,
+  natural: 43990,
+  economics: 47990,
+  programming: 49990,
+  technical: 54990,
+  construction: 59990,
+};
+
+const VKR_REQUIREMENTS_MAIN = {
+  standardUniqueness: 5500,
+  highUniqueness: 12000,
+  presentation: 2500,
+  speech: 1500,
+  projectDocs: PROJECT_DOCS_VKR,
+  economicsCalculations: 5000,
+};
+
+const VKR_REQUIREMENTS_UNIVERSITY = {
+  standardUniqueness: 10000,
+  highUniqueness: 12000,
+  presentation: 2250,
+  speech: 1350,
+  projectDocs: PROJECT_DOCS_UNIVERSITY_VKR,
+  economicsCalculations: 5000,
+};
+
+const VKR_BASE_MAIN = inflateFromFullPayment(VKR_TARGETS_MAIN.humanities)
+  - VKR_REQUIREMENTS_MAIN.standardUniqueness
+  - VKR_REQUIREMENTS_MAIN.presentation
+  - VKR_REQUIREMENTS_MAIN.speech;
+const UNIVERSITY_VKR_BASE = inflateFromFullPayment(VKR_TARGETS_UNIVERSITY.humanities)
+  - VKR_REQUIREMENTS_UNIVERSITY.standardUniqueness
+  - VKR_REQUIREMENTS_UNIVERSITY.presentation
+  - VKR_REQUIREMENTS_UNIVERSITY.speech;
+
+function specialtyLabel(value) {
+  const item = SPECIALTIES.find((s) => s.value === value);
+  return item ? item.label : 'Не выбрана';
 }
 
-function vkrUrgencySurcharge(spec, urgency) {
-  const hard = spec === 'hard';
+function specialtyTarget(specialty, targets) {
+  return targets[specialty] || targets.humanities;
+}
+
+function vkrPageRate(specialty) {
+  return ['programming', 'technical', 'construction'].includes(specialty) ? VKR_PAGE_RATE_HARD : VKR_PAGE_RATE_SOFT;
+}
+
+function universityVkrPageRate(specialty) {
+  return ['programming', 'technical', 'construction'].includes(specialty) ? UNIVERSITY_VKR_PAGE_RATE_HARD : UNIVERSITY_VKR_PAGE_RATE_SOFT;
+}
+
+function vkrUrgencySurcharge(specialty, urgency) {
+  const hard = ['programming', 'technical', 'construction'].includes(specialty);
   return {
     normal: 0,
     medium: hard ? 7000 : 4000,
@@ -26,51 +87,62 @@ function vkrUrgencySurcharge(spec, urgency) {
   }[urgency] || 0;
 }
 
-function vkrUniquenessSurcharge(spec, uniqueness) {
-  if (spec === 'simple') {
-    return { none: 0, standard: 5500, high: 12000 }[uniqueness] || 0;
-  }
-  return { none: 0, standard: 7000, high: 15000 }[uniqueness] || 0;
-}
-
-function universityVkrPageRate(spec) {
-  return spec === 'hard' ? UNIVERSITY_VKR_PAGE_RATE_HARD : UNIVERSITY_VKR_PAGE_RATE_SOFT;
-}
-
-function universityVkrUrgencySurcharge(spec, urgency) {
+function universityVkrUrgencySurcharge(specialty, urgency) {
+  const hard = ['programming', 'technical', 'construction'].includes(specialty);
   const tariffs = {
-    simple: { normal: 0, medium: 2500, urgent: 5200, veryUrgent: 9000 },
-    medium: { normal: 0, medium: 3200, urgent: 6500, veryUrgent: 11000 },
+    soft: { normal: 0, medium: 3200, urgent: 6500, veryUrgent: 11000 },
     hard: { normal: 0, medium: 5200, urgent: 10500, veryUrgent: 17500 },
   };
-  return (tariffs[spec] || tariffs.simple)[urgency] || 0;
+  return (hard ? tariffs.hard : tariffs.soft)[urgency] || 0;
 }
 
-function universityVkrUniquenessSurcharge(spec, uniqueness) {
-  const tariffs = {
-    simple: { none: 0, standard: 10000, high: 12000 },
-    medium: { none: 0, standard: 5000, high: 9900 },
-    hard: { none: 0, standard: 5000, high: 12000 },
-  };
-  return (tariffs[spec] || tariffs.simple)[uniqueness] || 0;
+function vkrUniquenessSurcharge(uniqueness, requirements) {
+  return { none: 0, standard: requirements.standardUniqueness, high: requirements.highUniqueness }[uniqueness] || 0;
 }
 
-const SPEC_STD = [
-  { value: 'simple', label: 'Простая — гуманитарная' },
-  { value: 'medium', label: 'Средняя — экономика, менеджмент' },
-  { value: 'hard', label: 'Сложная — программирование, строительство, техническая' },
-];
+function vkrAutoRequirementSurcharge(specialty, requirements) {
+  if (specialty === 'economics') return requirements.economicsCalculations;
+  return 0;
+}
 
-const SPEC_WORK = [
-  { value: 'simple', label: 'Простая работа' },
-  { value: 'medium', label: 'Средняя работа' },
-  { value: 'hard', label: 'Сложная работа' },
+function vkrSpecialtySurcharge(specialty, targets, requirements, base) {
+  const targetFull = inflateFromFullPayment(specialtyTarget(specialty, targets));
+  const standardProjectDocs = ['programming', 'technical', 'construction'].includes(specialty) ? requirements.projectDocs : 0;
+  const standardAuto = vkrAutoRequirementSurcharge(specialty, requirements);
+  return targetFull
+    - base
+    - requirements.standardUniqueness
+    - requirements.presentation
+    - requirements.speech
+    - standardProjectDocs
+    - standardAuto;
+}
+
+function specialtyMultiplier(specialty, targets) {
+  return specialtyTarget(specialty, targets) / targets.humanities;
+}
+
+function specialtySurcharge(serviceBase, specialty, targets) {
+  return Math.round(serviceBase * (specialtyMultiplier(specialty, targets) - 1));
+}
+
+function fullPaymentPrice(fullPrice) {
+  return Math.round((Number(fullPrice) || 0) * (1 - FULL_PAYMENT_DISCOUNT));
+}
+
+const SPECIALTIES = [
+  { value: 'humanities', label: 'Гуманитарная' },
+  { value: 'natural', label: 'Естественная' },
+  { value: 'economics', label: 'Экономика' },
+  { value: 'programming', label: 'Программирование' },
+  { value: 'technical', label: 'Инженерная / техническая' },
+  { value: 'construction', label: 'Строительство' },
 ];
 
 const UNIQ_STD = [
   { value: 'none', label: 'Без требований' },
-  { value: 'standard', label: 'Стандартная уникальность' },
-  { value: 'high', label: 'Повышенная уникальность' },
+  { value: 'standard', label: 'Обычная уникальность — 60–75%' },
+  { value: 'high', label: 'Повышенная уникальность — свыше 75%' },
 ];
 
 const UNIQ_AI = [
@@ -80,10 +152,10 @@ const UNIQ_AI = [
 ];
 
 const URG_VKR = [
-  { value: 'normal', label: 'Обычный срок — от 14 дней' },
-  { value: 'medium', label: 'Среднесрочно — 8–13 дней' },
-  { value: 'urgent', label: 'Срочно — 4–7 дней' },
-  { value: 'veryUrgent', label: 'Очень срочно — 1–3 дня' },
+  { value: 'normal', label: 'Стандартно — 4 недели' },
+  { value: 'medium', label: 'Немного срочно — 3–4 недели' },
+  { value: 'urgent', label: 'Срочно — 1–2 недели' },
+  { value: 'veryUrgent', label: 'Очень срочно — менее 1 недели' },
 ];
 
 const URG_MID = [
@@ -118,11 +190,11 @@ const DISCIPLINE_FIELD = {
 const SERVICES = {
   diploma: {
     label: 'Дипломная / ВКР',
-    base: 35000,
+    base: VKR_BASE_MAIN,
     max: 120000,
     fields: [
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 30, max: 100, placeholder: '60', step: 1, hint: 'База за 60 стр.; типичный диапазон 50–80 стр.; ±200–250 ₽ за каждую стр. от 60' },
-      { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
+      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_VKR },
       { key: 'presentation', label: 'Нужна презентация', type: 'addonChoice', price: 2500 },
@@ -133,14 +205,16 @@ const SERVICES = {
       const pages = Number(v.pages);
       const pageRate = vkrPageRate(v.specialization);
       const pagesDelta = (pages - VKR_PAGES_ANCHOR) * pageRate;
-      const spec = { simple: 0, medium: 7000, hard: 15000 }[v.specialization];
-      const uniq = vkrUniquenessSurcharge(v.specialization, v.uniqueness);
+      const spec = vkrSpecialtySurcharge(v.specialization, VKR_TARGETS_MAIN, VKR_REQUIREMENTS_MAIN, VKR_BASE_MAIN);
+      const uniq = vkrUniquenessSurcharge(v.uniqueness, VKR_REQUIREMENTS_MAIN);
       const urg = vkrUrgencySurcharge(v.specialization, v.urgency);
+      const auto = vkrAutoRequirementSurcharge(v.specialization, VKR_REQUIREMENTS_MAIN);
       return [
         { label: `Корректировка страниц (${pages} − ${VKR_PAGES_ANCHOR}) × ${pageRate} ₽`, value: pagesDelta },
-        { label: 'Сложность специализации', value: spec },
+        { label: `Специальность — ${specialtyLabel(v.specialization)}`, value: spec },
         { label: 'Уникальность', value: uniq },
         { label: 'Срочность', value: urg },
+        { label: 'Расчёты по экономике', value: auto },
         { label: 'Презентация', value: v.presentation === 'yes' ? 2500 : 0 },
         { label: 'Речь к защите', value: v.speech === 'yes' ? 1500 : 0 },
         { label: 'Проектная документация', value: v.projectDocs === 'yes' ? PROJECT_DOCS_VKR : 0 },
@@ -156,7 +230,7 @@ const SERVICES = {
     fields: [
       DISCIPLINE_FIELD,
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 30, max: 100, placeholder: '60', step: 1, hint: 'База 29 990 ₽ за 60 стр.; ±170–210 ₽ за каждую стр. от 60' },
-      { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
+      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_VKR },
       { key: 'presentation', label: 'Нужна презентация', type: 'addonChoice', price: 2250 },
@@ -167,14 +241,16 @@ const SERVICES = {
       const pages = Number(v.pages);
       const pageRate = universityVkrPageRate(v.specialization);
       const pagesDelta = (pages - VKR_PAGES_ANCHOR) * pageRate;
-      const spec = { simple: 0, medium: 5000, hard: 13000 }[v.specialization];
-      const uniq = universityVkrUniquenessSurcharge(v.specialization, v.uniqueness);
+      const spec = vkrSpecialtySurcharge(v.specialization, VKR_TARGETS_UNIVERSITY, VKR_REQUIREMENTS_UNIVERSITY, UNIVERSITY_VKR_BASE);
+      const uniq = vkrUniquenessSurcharge(v.uniqueness, VKR_REQUIREMENTS_UNIVERSITY);
       const urg = universityVkrUrgencySurcharge(v.specialization, v.urgency);
+      const auto = vkrAutoRequirementSurcharge(v.specialization, VKR_REQUIREMENTS_UNIVERSITY);
       return [
         { label: `Корректировка страниц (${pages} − ${VKR_PAGES_ANCHOR}) × ${pageRate} ₽`, value: pagesDelta },
-        { label: 'Сложность специализации', value: spec },
+        { label: `Специальность — ${specialtyLabel(v.specialization)}`, value: spec },
         { label: 'Уникальность', value: uniq },
         { label: 'Срочность', value: urg },
+        { label: 'Расчёты по экономике', value: auto },
         { label: 'Презентация', value: v.presentation === 'yes' ? 2250 : 0 },
         { label: 'Речь к защите', value: v.speech === 'yes' ? 1350 : 0 },
         { label: 'Проектная документация', value: v.projectDocs === 'yes' ? PROJECT_DOCS_UNIVERSITY_VKR : 0 },
@@ -188,7 +264,7 @@ const SERVICES = {
     max: 19990,
     fields: [
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 5, max: 60, placeholder: '20', step: 1, hint: '+100 ₽ за страницу' },
-      { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
+      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_MID },
       { key: 'calculations', label: 'Нужны расчёты', type: 'checkbox', price: 3750 },
@@ -198,7 +274,7 @@ const SERVICES = {
       const pages = Number(v.pages);
       return [
         { label: `Страницы (${pages} × 100 ₽)`, value: pages * 100 },
-        { label: 'Сложность специализации', value: { simple: 0, medium: 1100, hard: 2700 }[v.specialization] },
+        { label: `Специальность — ${specialtyLabel(v.specialization)}`, value: specialtySurcharge(4400, v.specialization, VKR_TARGETS_MAIN) },
         { label: 'Уникальность', value: { none: 0, standard: 1300, high: 2900 }[v.uniqueness] },
         { label: 'Срочность', value: { normal: 0, medium: 1000, urgent: 2400, veryUrgent: 4300 }[v.urgency] },
         { label: 'Расчёты', value: v.calculations ? 3750 : 0 },
@@ -214,7 +290,7 @@ const SERVICES = {
     fields: [
       DISCIPLINE_FIELD,
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 5, max: 60, placeholder: '20', step: 1, hint: '+80 ₽ за страницу' },
-      { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
+      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_MID },
       { key: 'diary', label: 'Дневник практики', type: 'checkbox', price: 1275 },
@@ -231,7 +307,7 @@ const SERVICES = {
       const pages = Number(v.pages);
       return [
         { label: `Страницы (${pages} × 80 ₽)`, value: pages * 80 },
-        { label: 'Сложность специализации', value: { simple: 0, medium: 800, hard: 1800 }[v.specialization] },
+        { label: `Специальность — ${specialtyLabel(v.specialization)}`, value: specialtySurcharge(5000, v.specialization, VKR_TARGETS_MAIN) },
         { label: 'Уникальность', value: { none: 0, standard: 800, high: 1500 }[v.uniqueness] },
         { label: 'Срочность', value: { normal: 0, medium: 900, urgent: 1500, veryUrgent: 2600 }[v.urgency] },
         { label: 'Дневник практики', value: v.diary ? 1275 : 0 },
@@ -247,7 +323,7 @@ const SERVICES = {
     max: 5500,
     fields: [
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 3, max: 40, placeholder: '10', step: 1, hint: '+60 ₽ за страницу' },
-      { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
+      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_SHORT },
     ],
@@ -255,7 +331,7 @@ const SERVICES = {
       const pages = Number(v.pages);
       return [
         { label: `Страницы (${pages} × 60 ₽)`, value: pages * 60 },
-        { label: 'Сложность специализации', value: { simple: 0, medium: 350, hard: 750 }[v.specialization] },
+        { label: `Специальность — ${specialtyLabel(v.specialization)}`, value: specialtySurcharge(2700, v.specialization, VKR_TARGETS_MAIN) },
         { label: 'Уникальность', value: { none: 0, standard: 500, high: 950 }[v.uniqueness] },
         { label: 'Срочность', value: { normal: 0, medium: 450, urgent: 950, veryUrgent: 1600 }[v.urgency] },
       ];
@@ -268,7 +344,7 @@ const SERVICES = {
     max: 5500,
     fields: [
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 3, max: 50, placeholder: '10', step: 1, hint: '+90 ₽ за страницу' },
-      { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
+      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_SHORT },
       { key: 'calculations', label: 'Есть расчёты', type: 'checkbox', price: 2000 },
@@ -277,7 +353,7 @@ const SERVICES = {
       const pages = Number(v.pages);
       return [
         { label: `Страницы (${pages} × 90 ₽)`, value: pages * 90 },
-        { label: 'Сложность специализации', value: { simple: 0, medium: 650, hard: 1500 }[v.specialization] },
+        { label: `Специальность — ${specialtyLabel(v.specialization)}`, value: specialtySurcharge(2700, v.specialization, VKR_TARGETS_MAIN) },
         { label: 'Уникальность', value: { none: 0, standard: 650, high: 1250 }[v.uniqueness] },
         { label: 'Срочность', value: { normal: 0, medium: 650, urgent: 1250, veryUrgent: 2200 }[v.urgency] },
         { label: 'Расчёты', value: v.calculations ? 2000 : 0 },
@@ -291,7 +367,7 @@ const SERVICES = {
     max: 12000,
     fields: [
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 3, max: 80, placeholder: '10', step: 1, hint: '+80 ₽ за страницу' },
-      { key: 'specialization', label: 'Сложность работы', type: 'select', options: SPEC_WORK },
+      { key: 'specialization', label: 'Специальность', type: 'select', options: SPECIALTIES },
       { key: 'uniqueness', label: 'Задача по ИИ', type: 'select', options: UNIQ_AI },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_SHORT },
     ],
@@ -299,7 +375,7 @@ const SERVICES = {
       const pages = Number(v.pages);
       return [
         { label: `Страницы (${pages} × 80 ₽)`, value: pages * 80 },
-        { label: 'Сложность работы', value: { simple: 0, medium: 1000, hard: 2500 }[v.specialization] },
+        { label: `Специальность — ${specialtyLabel(v.specialization)}`, value: specialtySurcharge(4000, v.specialization, VKR_TARGETS_MAIN) },
         { label: 'Задача по ИИ', value: { none: 0, standard: 1500, high: 3000 }[v.uniqueness] },
         { label: 'Срочность', value: { normal: 0, medium: 1000, urgent: 2000, veryUrgent: 3000 }[v.urgency] },
       ];
@@ -358,13 +434,15 @@ const fmt = (n) => new Intl.NumberFormat('ru-RU').format(Math.round(n));
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-function paymentInfo(price) {
-  const amount = Math.max(0, Math.round(Number(price) || 0));
-  if (amount <= 0) {
+function paymentInfo(discountedPrice, fullPrice) {
+  const discounted = Math.max(0, Math.round(Number(discountedPrice) || 0));
+  const amount = Math.max(0, Math.round(Number(fullPrice || discountedPrice) || 0));
+  if (discounted <= 0 || amount <= 0) {
     return {
       discountPrice: 0,
       discountText: 'Скидка 7% при полной оплате появится после расчёта.',
       partsText: 'Схема оплаты появится после расчёта.',
+      lastChanceText: '',
     };
   }
 
@@ -376,14 +454,16 @@ function paymentInfo(price) {
   }
 
   return {
-    discountPrice: Math.round(amount * 0.93),
-    discountText: `При полной оплате со скидкой 7%: ${fmt(amount * 0.93)} ₽.`,
-    partsText,
+    discountPrice: discounted,
+    fullPrice: amount,
+    discountText: `Цена при полной оплате со скидкой 7%: ${fmt(discounted)} ₽.`,
+    partsText: `При оплате частями цена без скидки: ${fmt(amount)} ₽. ${partsText}`,
+    lastChanceText: `Скидка последней надежды 10%: ${fmt(discounted * (1 - LAST_CHANCE_DISCOUNT))} ₽, если клиент решил подумать или не отвечает 2 часа.`,
   };
 }
 
-function renderPaymentInfo(el, price) {
-  if (!el || price <= 0) {
+function renderPaymentInfo(el, discountedPrice, fullPrice, guidanceText) {
+  if (!el || discountedPrice <= 0) {
     if (el) {
       el.classList.add('hidden');
       el.innerHTML = '';
@@ -391,12 +471,59 @@ function renderPaymentInfo(el, price) {
     return;
   }
 
-  const info = paymentInfo(price);
+  const info = paymentInfo(discountedPrice, fullPrice);
+  const guidance = guidanceText ? `<span>${guidanceText}</span>` : '';
   el.innerHTML = `
     <span><strong>${info.discountText}</strong></span>
     <span>${info.partsText}</span>
+    <span>${info.lastChanceText}</span>
+    ${guidance}
   `;
   el.classList.remove('hidden');
+}
+
+function managerGuidance(values) {
+  if (!values || !values.specialization) return '';
+  const bySpecialty = {
+    humanities: 'Аргумент менеджеру: цена держится на объёме, логике текста и прохождении уникальности 60–75%+ без рискованных заимствований.',
+    natural: 'Аргумент менеджеру: естественная специальность требует проверки терминов, источников и корректной структуры, поэтому работа дороже гуманитарной.',
+    economics: 'Аргумент менеджеру: в экономике важны расчёты, таблицы и выводы по цифрам, это не просто текстовая работа.',
+    programming: 'Аргумент менеджеру: в программировании важны язык, стек, код, тестирование и связка практической части с текстом ВКР.',
+    technical: 'Аргумент менеджеру: инженерная работа требует технических расчётов, нормативов, схем и точной терминологии.',
+    construction: 'Аргумент менеджеру: строительство включает чертежи, нагрузки, нормативы и проверку проектной логики.',
+  };
+  return `${bySpecialty[values.specialization] || ''} Преподаватель перед защитой проведёт консультацию и подготовит клиента к вопросам комиссии.`;
+}
+
+function optionLabel(options, value) {
+  const item = (options || []).find((o) => o.value === value);
+  return item ? item.label : value;
+}
+
+function describeValue(field, value) {
+  if (field.type === 'select') return optionLabel(field.options, value);
+  if (field.type === 'addonChoice') return value === 'yes' ? 'Надо' : 'Не надо';
+  if (field.type === 'checkbox') return value ? 'Да' : 'Нет';
+  return value;
+}
+
+function serviceParams(serviceKey, values) {
+  const svc = SERVICES[serviceKey];
+  return svc.fields
+    .filter((field) => field.key && !field.optional)
+    .map((field) => `${field.label}: ${describeValue(field, values[field.key])}`);
+}
+
+function paymentNotes(discountedPrice, fullPrice, values) {
+  const info = paymentInfo(discountedPrice, fullPrice);
+  const notes = [
+    info.discountText,
+    info.partsText,
+    info.lastChanceText,
+  ];
+  const guidance = managerGuidance(values);
+  if (guidance) notes.push(guidance);
+  return notes;
 }
 
 let itemIdCounter = 0;
@@ -443,13 +570,15 @@ function isFormComplete(serviceKey, values) {
 function computePrice(serviceKey, values) {
   const svc = SERVICES[serviceKey];
   if (!isFormComplete(serviceKey, values)) {
-    return { price: 0, raw: 0, rows: [], clamped: false, override: false, incomplete: true };
+    return { price: 0, fullPrice: 0, raw: 0, rows: [], clamped: false, override: false, incomplete: true };
   }
   if (svc.override) {
     const fixed = svc.override(values);
     if (fixed !== null && fixed !== undefined) {
+      const price = fullPaymentPrice(fixed);
       return {
-        price: fixed,
+        price,
+        fullPrice: fixed,
         raw: fixed,
         rows: [{ label: 'Фиксированная цена', value: fixed }],
         clamped: false,
@@ -461,9 +590,11 @@ function computePrice(serviceKey, values) {
   const rows = svc.breakdown(values);
   const extra = rows.reduce((s, r) => s + r.value, 0);
   const raw = svc.base + extra;
-  const price = clamp(raw, svc.base, svc.max);
+  const fullPrice = clamp(raw, svc.base, svc.max);
+  const price = fullPaymentPrice(fullPrice);
   return {
     price,
+    fullPrice,
     raw,
     rows,
     clamped: raw > svc.max || raw < svc.base,
@@ -477,27 +608,30 @@ function computeOrderItemPrice(item) {
   if (!kind) return { price: 0, label: 'Неизвестно', rows: [], incomplete: true };
 
   if (kind.manual) {
-    const price = Math.max(0, Number(item.values.manualPrice) || 0);
+    const fullPrice = Math.max(0, Number(item.values.manualPrice) || 0);
+    const price = fullPaymentPrice(fullPrice);
     const title = (item.values.title || '').trim() || 'Своя позиция';
-    if (!title || price <= 0) return { price: 0, label: title || 'Своя позиция', rows: [], incomplete: true };
-    return { price, label: title, rows: [{ label: title, value: price }], incomplete: false };
+    if (!title || fullPrice <= 0) return { price: 0, fullPrice: 0, label: title || 'Своя позиция', rows: [], incomplete: true };
+    return { price, fullPrice, label: title, rows: [{ label: title, value: fullPrice }], incomplete: false };
   }
 
   if (kind.preset === 'practice') {
     const qtyRaw = item.values.quantity;
     const qty = Number(qtyRaw);
     if (qtyRaw === '' || Number.isNaN(qty) || qty < 1) {
-      return { price: 0, label: kind.label, rows: [], incomplete: true };
+      return { price: 0, fullPrice: 0, label: kind.label, rows: [], incomplete: true };
     }
     const q = clamp(Math.round(qty), 1, 10);
     const preset = PRACTICE_PRESETS[item.values.practiceType || 'standard'];
     const unit = preset ? preset.price : PRACTICE_PRESETS.standard.price;
-    const price = unit * q;
+    const fullPrice = unit * q;
+    const price = fullPaymentPrice(fullPrice);
     const label = withDiscipline(q > 1 ? `${preset.label} × ${q}` : preset.label, item.values);
     return {
       price,
+      fullPrice,
       label,
-      rows: [{ label: `${preset.label} (${q} × ${fmt(unit)} ₽)`, value: price }],
+      rows: [{ label: `${preset.label} (${q} × ${fmt(unit)} ₽)`, value: fullPrice }],
       incomplete: false,
     };
   }
@@ -506,17 +640,19 @@ function computeOrderItemPrice(item) {
     const qtyRaw = item.values.quantity;
     const qty = Number(qtyRaw);
     if (qtyRaw === '' || Number.isNaN(qty) || qty < 1) {
-      return { price: 0, label: kind.label, rows: [], incomplete: true };
+      return { price: 0, fullPrice: 0, label: kind.label, rows: [], incomplete: true };
     }
     const q = clamp(Math.round(qty), 1, 10);
     const preset = COURSEWORK_PRESETS[item.values.courseworkType || 'standard'];
     const unit = preset ? preset.price : COURSEWORK_PRESETS.standard.price;
-    const price = unit * q;
+    const fullPrice = unit * q;
+    const price = fullPaymentPrice(fullPrice);
     const label = withDiscipline(q > 1 ? `${preset.label} × ${q}` : preset.label, item.values);
     return {
       price,
+      fullPrice,
       label,
-      rows: [{ label: `${preset.label} (${q} × ${fmt(unit)} ₽)`, value: price }],
+      rows: [{ label: `${preset.label} (${q} × ${fmt(unit)} ₽)`, value: fullPrice }],
       incomplete: false,
     };
   }
@@ -525,15 +661,17 @@ function computeOrderItemPrice(item) {
     const qtyRaw = item.values.quantity;
     const qty = Number(qtyRaw);
     if (qtyRaw === '' || Number.isNaN(qty) || qty < 1) {
-      return { price: 0, label: kind.label, rows: [], incomplete: true };
+      return { price: 0, fullPrice: 0, label: kind.label, rows: [], incomplete: true };
     }
     const q = clamp(Math.round(qty), 1, 30);
-    const price = TEST_UNIT_PRICE * q;
+    const fullPrice = TEST_UNIT_PRICE * q;
+    const price = fullPaymentPrice(fullPrice);
     const label = withDiscipline(q > 1 ? `Тест × ${q}` : 'Тест', item.values);
     return {
       price,
+      fullPrice,
       label,
-      rows: [{ label: `Тест (${q} × ${fmt(TEST_UNIT_PRICE)} ₽)`, value: price }],
+      rows: [{ label: `Тест (${q} × ${fmt(TEST_UNIT_PRICE)} ₽)`, value: fullPrice }],
       incomplete: false,
     };
   }
@@ -543,6 +681,7 @@ function computeOrderItemPrice(item) {
     const label = withDiscipline(SERVICES[kind.serviceKey].label, item.values);
     return {
       price: result.price,
+      fullPrice: result.fullPrice,
       label,
       rows: result.rows,
       clamped: result.clamped,
@@ -822,11 +961,11 @@ function recalcMain() {
 
   $('#price-value').textContent = fmt(result.price);
   $('#price-value-2').textContent = fmt(result.price);
-  $('#price-min').textContent = fmt(svc.base);
-  $('#price-max').textContent = fmt(svc.max);
+  $('#price-min').textContent = fmt(fullPaymentPrice(svc.base));
+  $('#price-max').textContent = fmt(fullPaymentPrice(svc.max));
 
   renderBreakdownList($('#breakdown-list'), currentService, result);
-  renderPaymentInfo($('#payment-info-main'), result.incomplete ? 0 : result.price);
+  renderPaymentInfo($('#payment-info-main'), result.incomplete ? 0 : result.price, result.fullPrice, managerGuidance(values));
 
   const badge = $('#clamp-badge');
   if (result.incomplete) {
@@ -1041,12 +1180,14 @@ function renderOrder() {
 
 function recalcOrder() {
   let total = 0;
+  let fullTotal = 0;
   const breakdownEl = $('#order-breakdown');
   breakdownEl.innerHTML = '';
 
   for (const item of orderItems) {
     const computed = computeOrderItemPrice(item);
     total += computed.price;
+    fullTotal += computed.fullPrice || computed.price;
     const li = document.createElement('li');
     li.innerHTML = `<span>${computed.label}</span><span>${fmt(computed.price)} ₽</span>`;
     breakdownEl.appendChild(li);
@@ -1060,7 +1201,7 @@ function recalcOrder() {
 
   $('#order-total').textContent = fmt(total);
   $('#order-total-2').textContent = fmt(total);
-  renderPaymentInfo($('#payment-info-order'), total);
+  renderPaymentInfo($('#payment-info-order'), total, fullTotal);
   const n = orderItems.length;
   const word = n === 1 ? 'позиция' : n >= 2 && n <= 4 ? 'позиции' : 'позиций';
   $('#order-desc').textContent = n ? `${n} ${word} в заказе` : '0 позиций';
@@ -1079,8 +1220,18 @@ function buildMainInvoicePayload() {
   }
 
   return {
-    items: [{ name: label, qty: 1, unitPrice: result.price, amount: result.price, details }],
+    items: [{
+      name: label,
+      qty: 1,
+      unitPrice: result.price,
+      amount: result.price,
+      fullPrice: result.fullPrice,
+      details,
+      params: serviceParams(currentService, values),
+    }],
     total: result.price,
+    fullTotal: result.fullPrice,
+    notes: paymentNotes(result.price, result.fullPrice, values),
   };
 }
 
@@ -1089,21 +1240,32 @@ function buildOrderInvoicePayload() {
 
   const items = [];
   let total = 0;
+  let fullTotal = 0;
+  const notes = [];
 
   for (const item of orderItems) {
     const computed = computeOrderItemPrice(item);
     if (computed.incomplete || computed.price <= 0) continue;
     total += computed.price;
+    fullTotal += computed.fullPrice || computed.price;
+    const kind = CONSTRUCTOR_KINDS[item.kind];
+    const params = kind && kind.serviceKey ? serviceParams(kind.serviceKey, item.values) : [];
     items.push({
       name: computed.label,
       qty: 1,
       unitPrice: computed.price,
       amount: computed.price,
+      fullPrice: computed.fullPrice || computed.price,
+      details: computed.rows || [],
+      params,
     });
+    if (kind && kind.serviceKey && item.values.specialization) {
+      notes.push(managerGuidance(item.values));
+    }
   }
 
   if (items.length === 0 || total <= 0) return null;
-  return { items, total };
+  return { items, total, fullTotal, notes: paymentNotes(total, fullTotal, {}).concat(notes) };
 }
 
 function initConstructor() {

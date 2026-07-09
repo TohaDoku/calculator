@@ -99,6 +99,64 @@
     );
   }
 
+  function detailName(detail) {
+    return detail.name || detail.label || '';
+  }
+
+  function detailAmount(detail) {
+    return typeof detail.amount === 'number' ? detail.amount : detail.value;
+  }
+
+  function itemInfoText(item) {
+    const lines = [];
+    if (item.params && item.params.length) {
+      lines.push('Параметры работы: ' + item.params.join('; '));
+    }
+    if (item.details && item.details.length) {
+      const details = item.details.map(function (detail) {
+        const amount = detailAmount(detail);
+        return detailName(detail) + (typeof amount === 'number' ? ': ' + formatMoney(amount) + ' ₽' : '');
+      });
+      lines.push('Расшифровка: ' + details.join('; '));
+    }
+    if (item.fullPrice && item.fullPrice !== item.amount) {
+      lines.push('Цена при оплате частями без скидки: ' + formatMoney(item.fullPrice) + ' ₽');
+    }
+    return lines;
+  }
+
+  function payloadInfoParagraphs(payload) {
+    let result = '';
+    payload.items.forEach(function (item) {
+      itemInfoText(item).forEach(function (line) {
+        result += paragraph(line, { size: 20 });
+      });
+    });
+    if (payload.notes && payload.notes.length) {
+      result += paragraph('Условия и подсказки менеджеру:', { bold: true, size: 22 });
+      payload.notes.forEach(function (note) {
+        result += paragraph(note, { size: 20 });
+      });
+    }
+    return result;
+  }
+
+  function payloadInfoHtml(payload) {
+    let result = '';
+    payload.items.forEach(function (item) {
+      itemInfoText(item).forEach(function (line) {
+        result += '<p>' + escapeXml(line) + '</p>';
+      });
+    });
+    if (payload.notes && payload.notes.length) {
+      result += '<p><b>Условия и подсказки менеджеру:</b></p>';
+      payload.notes.forEach(function (note) {
+        result += '<p>' + escapeXml(note) + '</p>';
+      });
+    }
+    return result;
+  }
+
   function buildDocumentXml(payload) {
     const number = invoiceNumber();
     const dateStr = formatDate();
@@ -132,7 +190,9 @@
       rows +
       '</w:tbl>' +
       paragraph('Итого: ' + formatMoney(payload.total) + ' ₽', { right: true, bold: true, size: 26 }) +
+      (payload.fullTotal ? paragraph('Цена при оплате частями без скидки: ' + formatMoney(payload.fullTotal) + ' ₽', { right: true, size: 22 }) : '') +
       paragraph('Всего к оплате: ' + amountInWords(payload.total)) +
+      payloadInfoParagraphs(payload) +
       paragraph('Документ сформирован внутренним калькулятором.', { size: 20 }) +
       '</w:body></w:document>'
     );
@@ -194,7 +254,9 @@
       rows +
       '</table>' +
       '<p style="text-align:right"><b>Итого: ' + formatMoney(payload.total) + ' ₽</b></p>' +
+      (payload.fullTotal ? '<p style="text-align:right">Цена при оплате частями без скидки: ' + formatMoney(payload.fullTotal) + ' ₽</p>' : '') +
       '<p><i>Всего к оплате: ' + amountInWords(payload.total) + '</i></p>' +
+      payloadInfoHtml(payload) +
       '</body></html>'
     );
   }
