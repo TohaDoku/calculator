@@ -48,7 +48,7 @@ function universityVkrUrgencySurcharge(spec, urgency) {
 
 function universityVkrUniquenessSurcharge(spec, uniqueness) {
   const tariffs = {
-    simple: { none: 0, standard: 5000, high: 8500 },
+    simple: { none: 0, standard: 10000, high: 12000 },
     medium: { none: 0, standard: 5000, high: 9900 },
     hard: { none: 0, standard: 5000, high: 12000 },
   };
@@ -358,6 +358,47 @@ const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
 const fmt = (n) => new Intl.NumberFormat('ru-RU').format(Math.round(n));
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
+
+function paymentInfo(price) {
+  const amount = Math.max(0, Math.round(Number(price) || 0));
+  if (amount <= 0) {
+    return {
+      discountPrice: 0,
+      discountText: 'Скидка 7% при полной оплате появится после расчёта.',
+      partsText: 'Схема оплаты появится после расчёта.',
+    };
+  }
+
+  let partsText = 'Можно оплатить заказ до 3 частей.';
+  if (amount <= 3000) {
+    partsText = 'До 3 000 ₽ — только полная оплата.';
+  } else if (amount <= 10000) {
+    partsText = 'До 10 000 ₽ — можно оплатить двумя частями.';
+  }
+
+  return {
+    discountPrice: Math.round(amount * 0.93),
+    discountText: `При полной оплате со скидкой 7%: ${fmt(amount * 0.93)} ₽.`,
+    partsText,
+  };
+}
+
+function renderPaymentInfo(el, price) {
+  if (!el || price <= 0) {
+    if (el) {
+      el.classList.add('hidden');
+      el.innerHTML = '';
+    }
+    return;
+  }
+
+  const info = paymentInfo(price);
+  el.innerHTML = `
+    <span><strong>${info.discountText}</strong></span>
+    <span>${info.partsText}</span>
+  `;
+  el.classList.remove('hidden');
+}
 
 let itemIdCounter = 0;
 function nextItemId() {
@@ -747,6 +788,7 @@ function recalcMain() {
   $('#price-max').textContent = fmt(svc.max);
 
   renderBreakdownList($('#breakdown-list'), currentService, result);
+  renderPaymentInfo($('#payment-info-main'), result.incomplete ? 0 : result.price);
 
   const badge = $('#clamp-badge');
   if (result.incomplete) {
@@ -980,6 +1022,7 @@ function recalcOrder() {
 
   $('#order-total').textContent = fmt(total);
   $('#order-total-2').textContent = fmt(total);
+  renderPaymentInfo($('#payment-info-order'), total);
   const n = orderItems.length;
   const word = n === 1 ? 'позиция' : n >= 2 && n <= 4 ? 'позиции' : 'позиций';
   $('#order-desc').textContent = n ? `${n} ${word} в заказе` : '0 позиций';

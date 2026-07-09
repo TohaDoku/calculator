@@ -222,6 +222,20 @@ main { padding: 20px 0 60px; }
 }
 .price-big .cur { color: var(--muted); font-size: 24px; font-family: 'Onest', sans-serif; }
 .price-range { font-size: 13px; margin-bottom: 16px; }
+.payment-info {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.payment-info.hidden { display: none; }
+.payment-info strong { color: var(--accent-ink); }
 
 .breakdown { border-top: 1px solid var(--border); padding-top: 16px; }
 .breakdown-title {
