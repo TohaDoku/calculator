@@ -73,11 +73,6 @@ const UNIQ_STD = [
   { value: 'high', label: 'Повышенная уникальность' },
 ];
 
-const ADDON_DECISION_OPTIONS = [
-  { value: 'no', label: 'Не надо' },
-  { value: 'yes', label: 'Надо' },
-];
-
 const UNIQ_AI = [
   { value: 'none', label: 'Просто снизить ИИ' },
   { value: 'standard', label: 'Нужно сильно снизить ИИ' },
@@ -130,9 +125,9 @@ const SERVICES = {
       { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_VKR },
-      { key: 'presentation', label: 'Нужна презентация', type: 'select', options: ADDON_DECISION_OPTIONS },
-      { key: 'speech', label: 'Нужна речь к защите', type: 'select', options: ADDON_DECISION_OPTIONS },
-      { key: 'projectDocs', label: PROJECT_DOCS_FIELD.label, type: 'select', options: ADDON_DECISION_OPTIONS },
+      { key: 'presentation', label: 'Нужна презентация', type: 'addonChoice', price: 2500 },
+      { key: 'speech', label: 'Нужна речь к защите', type: 'addonChoice', price: 1500 },
+      { key: 'projectDocs', label: PROJECT_DOCS_FIELD.label, type: 'addonChoice', price: PROJECT_DOCS_VKR, highlight: true },
     ],
     breakdown(v) {
       const pages = Number(v.pages);
@@ -164,9 +159,9 @@ const SERVICES = {
       { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_VKR },
-      { key: 'presentation', label: 'Нужна презентация', type: 'select', options: ADDON_DECISION_OPTIONS },
-      { key: 'speech', label: 'Нужна речь к защите', type: 'select', options: ADDON_DECISION_OPTIONS },
-      { key: 'projectDocs', label: PROJECT_DOCS_FIELD.label, type: 'select', options: ADDON_DECISION_OPTIONS },
+      { key: 'presentation', label: 'Нужна презентация', type: 'addonChoice', price: 2250 },
+      { key: 'speech', label: 'Нужна речь к защите', type: 'addonChoice', price: 1350 },
+      { key: 'projectDocs', label: PROJECT_DOCS_FIELD.label, type: 'addonChoice', price: PROJECT_DOCS_UNIVERSITY_VKR, highlight: true },
     ],
     breakdown(v) {
       const pages = Number(v.pages);
@@ -435,6 +430,8 @@ function isFormComplete(serviceKey, values) {
     if (f.optional || f.type === 'checkbox') continue;
     if (f.type === 'select') {
       if (!values[f.key]) return false;
+    } else if (f.type === 'addonChoice') {
+      if (values[f.key] !== 'yes' && values[f.key] !== 'no') return false;
     } else if (f.type === 'number') {
       const n = Number(values[f.key]);
       if (values[f.key] === '' || Number.isNaN(n)) return false;
@@ -631,6 +628,59 @@ function renderNumberField(wrap, f, values, onChange) {
   wrap.appendChild(row);
 }
 
+function renderAddonChoiceField(wrap, f, values, onChange) {
+  wrap.className = 'field field-addon-choice' + (f.highlight ? ' field-highlight' : '');
+  if (f.highlight) {
+    const badge = document.createElement('span');
+    badge.className = 'highlight-badge';
+    badge.textContent = 'Важно — не пропустите';
+    wrap.appendChild(badge);
+  }
+
+  const labelSpan = document.createElement('span');
+  labelSpan.className = 'field-label addon-choice-label';
+  let priceChip = '';
+  if (f.price) {
+    priceChip = ` <em class="chip">+${fmt(f.price)} ₽</em>`;
+  }
+  labelSpan.innerHTML = f.label + priceChip;
+  wrap.appendChild(labelSpan);
+
+  const buttons = document.createElement('div');
+  buttons.className = 'addon-choice-buttons';
+
+  const noBtn = document.createElement('button');
+  noBtn.type = 'button';
+  noBtn.className = 'addon-choice-btn addon-choice-no';
+  noBtn.textContent = '✕ Не надо';
+
+  const yesBtn = document.createElement('button');
+  yesBtn.type = 'button';
+  yesBtn.className = 'addon-choice-btn addon-choice-yes';
+  yesBtn.textContent = '✓ Надо';
+
+  const sync = () => {
+    noBtn.classList.toggle('active', values[f.key] === 'no');
+    yesBtn.classList.toggle('active', values[f.key] === 'yes');
+  };
+
+  noBtn.addEventListener('click', () => {
+    values[f.key] = 'no';
+    sync();
+    onChange();
+  });
+  yesBtn.addEventListener('click', () => {
+    values[f.key] = 'yes';
+    sync();
+    onChange();
+  });
+
+  sync();
+  buttons.appendChild(noBtn);
+  buttons.appendChild(yesBtn);
+  wrap.appendChild(buttons);
+}
+
 function renderServiceFields(container, serviceKey, values, onChange) {
   const svc = SERVICES[serviceKey];
   container.innerHTML = '';
@@ -668,6 +718,8 @@ function renderServiceFields(container, serviceKey, values, onChange) {
       row.appendChild(input);
       row.appendChild(span);
       wrap.appendChild(row);
+    } else if (f.type === 'addonChoice') {
+      renderAddonChoiceField(wrap, f, values, onChange);
     } else {
       const labelSpan = document.createElement('span');
       labelSpan.className = 'field-label';
