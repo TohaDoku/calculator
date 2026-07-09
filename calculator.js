@@ -73,6 +73,11 @@ const UNIQ_STD = [
   { value: 'high', label: 'Повышенная уникальность' },
 ];
 
+const ADDON_DECISION_OPTIONS = [
+  { value: 'no', label: 'Не надо' },
+  { value: 'yes', label: 'Надо' },
+];
+
 const UNIQ_AI = [
   { value: 'none', label: 'Просто снизить ИИ' },
   { value: 'standard', label: 'Нужно сильно снизить ИИ' },
@@ -125,9 +130,9 @@ const SERVICES = {
       { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_VKR },
-      { key: 'presentation', label: 'Нужна презентация', type: 'checkbox', price: 2500 },
-      { key: 'speech', label: 'Нужна речь к защите', type: 'checkbox', price: 1500 },
-      { ...PROJECT_DOCS_FIELD, price: PROJECT_DOCS_VKR },
+      { key: 'presentation', label: 'Нужна презентация', type: 'select', options: ADDON_DECISION_OPTIONS },
+      { key: 'speech', label: 'Нужна речь к защите', type: 'select', options: ADDON_DECISION_OPTIONS },
+      { key: 'projectDocs', label: PROJECT_DOCS_FIELD.label, type: 'select', options: ADDON_DECISION_OPTIONS },
     ],
     breakdown(v) {
       const pages = Number(v.pages);
@@ -141,9 +146,9 @@ const SERVICES = {
         { label: 'Сложность специализации', value: spec },
         { label: 'Уникальность', value: uniq },
         { label: 'Срочность', value: urg },
-        { label: 'Презентация', value: v.presentation ? 2500 : 0 },
-        { label: 'Речь к защите', value: v.speech ? 1500 : 0 },
-        { label: 'Проектная документация', value: v.projectDocs ? PROJECT_DOCS_VKR : 0 },
+        { label: 'Презентация', value: v.presentation === 'yes' ? 2500 : 0 },
+        { label: 'Речь к защите', value: v.speech === 'yes' ? 1500 : 0 },
+        { label: 'Проектная документация', value: v.projectDocs === 'yes' ? PROJECT_DOCS_VKR : 0 },
       ];
     },
   },
@@ -155,14 +160,13 @@ const SERVICES = {
     hidden: true,
     fields: [
       DISCIPLINE_FIELD,
-      { type: 'note', label: 'Скидка 7% при оплате сразу', hint: 'Покажите клиенту как аргумент для полной оплаты.' },
       { key: 'pages', label: 'Количество страниц', type: 'number', min: 30, max: 100, placeholder: '60', step: 1, hint: 'База 29 990 ₽ за 60 стр.; ±170–210 ₽ за каждую стр. от 60' },
       { key: 'specialization', label: 'Сложность специализации', type: 'select', options: SPEC_STD },
       { key: 'uniqueness', label: 'Требования по уникальности', type: 'select', options: UNIQ_STD },
       { key: 'urgency', label: 'Срок выполнения', type: 'select', options: URG_VKR },
-      { key: 'presentation', label: 'Нужна презентация', type: 'checkbox', price: 2250 },
-      { key: 'speech', label: 'Нужна речь к защите', type: 'checkbox', price: 1350 },
-      { ...PROJECT_DOCS_FIELD, price: PROJECT_DOCS_UNIVERSITY_VKR },
+      { key: 'presentation', label: 'Нужна презентация', type: 'select', options: ADDON_DECISION_OPTIONS },
+      { key: 'speech', label: 'Нужна речь к защите', type: 'select', options: ADDON_DECISION_OPTIONS },
+      { key: 'projectDocs', label: PROJECT_DOCS_FIELD.label, type: 'select', options: ADDON_DECISION_OPTIONS },
     ],
     breakdown(v) {
       const pages = Number(v.pages);
@@ -176,9 +180,9 @@ const SERVICES = {
         { label: 'Сложность специализации', value: spec },
         { label: 'Уникальность', value: uniq },
         { label: 'Срочность', value: urg },
-        { label: 'Презентация', value: v.presentation ? 2250 : 0 },
-        { label: 'Речь к защите', value: v.speech ? 1350 : 0 },
-        { label: 'Проектная документация', value: v.projectDocs ? PROJECT_DOCS_UNIVERSITY_VKR : 0 },
+        { label: 'Презентация', value: v.presentation === 'yes' ? 2250 : 0 },
+        { label: 'Речь к защите', value: v.speech === 'yes' ? 1350 : 0 },
+        { label: 'Проектная документация', value: v.projectDocs === 'yes' ? PROJECT_DOCS_UNIVERSITY_VKR : 0 },
       ];
     },
   },
@@ -369,11 +373,11 @@ function paymentInfo(price) {
     };
   }
 
-  let partsText = 'Можно оплатить заказ до 3 частей.';
+  let partsText = `Можно оплатить заказ до 3 частей по ${fmt(amount / 3)} ₽.`;
   if (amount <= 3000) {
     partsText = 'До 3 000 ₽ — только полная оплата.';
   } else if (amount <= 10000) {
-    partsText = 'До 10 000 ₽ — можно оплатить двумя частями.';
+    partsText = `До 10 000 ₽ — можно оплатить 2 частями по ${fmt(amount / 2)} ₽.`;
   }
 
   return {
@@ -428,7 +432,7 @@ function isFormComplete(serviceKey, values) {
     if (fixed !== null && fixed !== undefined) return true;
   }
   for (const f of svc.fields) {
-    if (f.optional || f.type === 'checkbox' || f.type === 'note') continue;
+    if (f.optional || f.type === 'checkbox') continue;
     if (f.type === 'select') {
       if (!values[f.key]) return false;
     } else if (f.type === 'number') {
@@ -635,25 +639,7 @@ function renderServiceFields(container, serviceKey, values, onChange) {
     const wrap = document.createElement('label');
     wrap.className = 'field';
 
-    if (f.type === 'note') {
-      wrap.className = 'field field-checkbox field-highlight';
-      const badge = document.createElement('span');
-      badge.className = 'highlight-badge';
-      badge.textContent = 'Подсказка менеджеру';
-      wrap.appendChild(badge);
-
-      const labelSpan = document.createElement('span');
-      labelSpan.className = 'checkbox-label';
-      labelSpan.textContent = f.label;
-      wrap.appendChild(labelSpan);
-
-      if (f.hint) {
-        const hint = document.createElement('span');
-        hint.className = 'field-hint';
-        hint.textContent = f.hint;
-        wrap.appendChild(hint);
-      }
-    } else if (f.type === 'checkbox') {
+    if (f.type === 'checkbox') {
       wrap.className = 'field field-checkbox' + (f.highlight ? ' field-highlight' : '');
       if (f.highlight) {
         const badge = document.createElement('span');
