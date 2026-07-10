@@ -341,6 +341,32 @@ main { padding: 20px 0 60px; }
 }
 .payment-info.hidden { display: none; }
 .payment-info strong { color: var(--accent-ink); }
+.execution-status {
+  display: grid;
+  gap: 5px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.execution-status.hidden { display: none; }
+.execution-status strong { font-size: 13px; }
+.execution-status-ready {
+  border: 1px solid rgba(46, 125, 50, 0.24);
+  background: rgba(46, 125, 50, 0.08);
+  color: #1b5e20;
+}
+.execution-status-request {
+  border: 1px solid rgba(245, 124, 0, 0.28);
+  background: rgba(245, 124, 0, 0.1);
+  color: #8a4b00;
+}
+.execution-status-pending {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--muted);
+}
 .last-chance-info {
   display: grid;
   gap: 6px;

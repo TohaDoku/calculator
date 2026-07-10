@@ -497,6 +497,138 @@ function renderPriceInfo(prefix, discountedPrice, fullPrice, guidanceText) {
   setInfoBlock(guidanceEl, guidanceText ? `<strong>Аргументы менеджеру</strong><span>${guidanceText}</span>` : '');
 }
 
+function executionStatus(kind, title, text) {
+  return { kind, title, text };
+}
+
+function executionPending(text) {
+  return executionStatus(
+    'pending',
+    'Проверка готовности',
+    text || 'Заполните параметры заказа, чтобы понять, можно ли выставить счёт без запроса.'
+  );
+}
+
+function executionReady(text) {
+  return executionStatus(
+    'ready',
+    'Можно выставить счёт без запроса',
+    text || 'Можно проактивно выставить счёт клиенту. По текущим параметрам запрос к исполнителям не нужен.'
+  );
+}
+
+function executionRequest(text) {
+  return executionStatus(
+    'request',
+    'Нужен запрос к исполнителям',
+    text || 'Нужен запрос к исполнителям перед счётом. Не обещайте готовность клиенту без уточнения.'
+  );
+}
+
+function isHardSpecialty(specialty) {
+  return ['programming', 'technical', 'construction'].includes(specialty);
+}
+
+function executionStatusForService(serviceKey, values) {
+  if (!isFormComplete(serviceKey, values)) return executionPending();
+
+  if (serviceKey === 'diploma' || serviceKey === 'universityDiploma') {
+    const hasProjectDocs = values.projectDocs === 'yes';
+    if (values.urgency === 'veryUrgent') {
+      return executionRequest('ВКР со сроком менее недели требует подтверждения готовности исполнителей перед счётом.');
+    }
+    if (hasProjectDocs && isHardSpecialty(values.specialization)) {
+      return executionRequest('Сложная специальность с проектной документацией требует запроса к профильным исполнителям.');
+    }
+    if (hasProjectDocs && values.urgency !== 'normal') {
+      return executionRequest('Проектная документация в сокращённый срок требует отдельного подтверждения выполнения.');
+    }
+    return executionReady();
+  }
+
+  if (serviceKey === 'coursework') {
+    if (values.urgency === 'veryUrgent' || values.calculations || values.projectDocs) {
+      return executionRequest('Курсовая с расчётами, проектной документацией или сроком 1 день требует запроса к исполнителям.');
+    }
+    return executionReady();
+  }
+
+  if (serviceKey === 'practice') {
+    if (values.urgency === 'veryUrgent' || values.projectDocs) {
+      return executionRequest('Практика со сложными доп. материалами или сроком 1 день требует подтверждения готовности.');
+    }
+    return executionReady();
+  }
+
+  if (serviceKey === 'control') {
+    if (values.urgency === 'veryUrgent' || values.calculations) {
+      return executionRequest('Контрольная с расчётами или сроком сегодня требует запроса к исполнителям.');
+    }
+    return executionReady();
+  }
+
+  if (serviceKey === 'referat' || serviceKey === 'aiCleaning') {
+    if (values.urgency === 'veryUrgent') {
+      return executionRequest('Заказ со сроком сегодня требует подтверждения готовности исполнителей.');
+    }
+    return executionReady();
+  }
+
+  if (serviceKey === 'test') {
+    const testsCount = Number(values.testsCount);
+    if (!testsCount || testsCount < 1) return executionPending();
+    if (testsCount > 10) return executionRequest('Больше 10 тестов требует запроса по доступной нагрузке исполнителей.');
+    return executionReady();
+  }
+
+  return executionReady();
+}
+
+function executionStatusForOrderItem(item) {
+  const cfg = CONSTRUCTOR_KINDS[item.kind];
+  if (!cfg) return executionRequest('Неизвестная позиция требует ручной проверки.');
+
+  if (cfg.manual) {
+    return executionRequest('Своя позиция требует запроса, потому что параметры выполнения не формализованы.');
+  }
+
+  if (cfg.preset === 'practice' || cfg.preset === 'coursework') {
+    const quantity = Number(item.values.quantity);
+    if (!quantity || quantity < 1) return executionPending();
+    if (quantity > 10) return executionRequest('Больше 10 однотипных работ требует проверки нагрузки исполнителей.');
+    return executionReady();
+  }
+
+  if (cfg.preset === 'test') {
+    const quantity = Number(item.values.quantity);
+    if (!quantity || quantity < 1) return executionPending();
+    if (quantity > 10) return executionRequest('Больше 10 тестов требует запроса по доступной нагрузке исполнителей.');
+    return executionReady();
+  }
+
+  if (cfg.serviceKey) return executionStatusForService(cfg.serviceKey, item.values);
+
+  return executionReady();
+}
+
+function executionStatusForOrder(items) {
+  if (!items.length) return executionPending('Добавьте позицию в заказ, чтобы проверить готовность выполнения.');
+
+  const statuses = items.map(executionStatusForOrderItem);
+  const request = statuses.find((status) => status.kind === 'request');
+  if (request) return request;
+  const pending = statuses.find((status) => status.kind === 'pending');
+  if (pending) return pending;
+  return executionReady('Можно проактивно выставить счёт клиенту по всем позициям заказа. Запрос к исполнителям не нужен.');
+}
+
+function renderExecutionStatus(prefix, status) {
+  const el = $(`#execution-status-${prefix}`);
+  if (!el) return;
+  el.className = `execution-status execution-status-${status.kind}`;
+  el.innerHTML = `<strong>${status.title}</strong><span>${status.text}</span>`;
+}
+
 function renderPaymentInfo(el, discountedPrice, fullPrice, guidanceText) {
   if (!el || discountedPrice <= 0) {
     if (el) {
@@ -1028,6 +1160,7 @@ function recalcMain() {
 
   renderBreakdownList($('#breakdown-list'), currentService, result);
   renderPriceInfo('main', result.incomplete ? 0 : result.price, result.fullPrice, managerGuidance(values));
+  renderExecutionStatus('main', executionStatusForService(currentService, values));
 
   const badge = $('#clamp-badge');
   if (result.incomplete) {
@@ -1272,6 +1405,7 @@ function recalcOrder() {
     .filter(Boolean)
     .join(' ');
   renderPriceInfo('order', total, fullTotal, guidance);
+  renderExecutionStatus('order', executionStatusForOrder(orderItems));
   const n = orderItems.length;
   const word = n === 1 ? 'позиция' : n >= 2 && n <= 4 ? 'позиции' : 'позиций';
   $('#order-desc').textContent = n ? `${n} ${word} в заказе` : '0 позиций';
