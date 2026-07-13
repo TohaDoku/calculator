@@ -521,7 +521,7 @@ function executionRequest(text) {
   return executionStatus(
     'request',
     'Нужен запрос к исполнителям',
-    text || 'Нужен запрос к исполнителям перед счётом. Не обещайте готовность клиенту без уточнения.'
+    text || 'Сложная специальность с проектной документацией требует запроса к профильным исполнителям.'
   );
 }
 
@@ -532,52 +532,49 @@ function isHardSpecialty(specialty) {
 function executionStatusForService(serviceKey, values) {
   if (!isFormComplete(serviceKey, values)) return executionPending();
 
-  if (serviceKey === 'diploma' || serviceKey === 'universityDiploma') {
+  if (serviceKey === 'diploma') {
     const hasProjectDocs = values.projectDocs === 'yes';
-    if (values.urgency === 'veryUrgent') {
-      return executionRequest('ВКР со сроком менее недели требует подтверждения готовности исполнителей перед счётом.');
-    }
-    if (hasProjectDocs && isHardSpecialty(values.specialization)) {
-      return executionRequest('Сложная специальность с проектной документацией требует запроса к профильным исполнителям.');
-    }
-    if (hasProjectDocs && values.urgency !== 'normal') {
-      return executionRequest('Проектная документация в сокращённый срок требует отдельного подтверждения выполнения.');
-    }
+    if (values.urgency === 'urgent' || values.urgency === 'veryUrgent') return executionReady();
+    if (isHardSpecialty(values.specialization)) return executionRequest();
+    if (hasProjectDocs) return executionRequest();
+    return executionReady();
+  }
+
+  if (serviceKey === 'universityDiploma') {
+    const hasProjectDocs = values.projectDocs === 'yes';
+    if (values.urgency === 'veryUrgent') return executionReady();
+    if (isHardSpecialty(values.specialization)) return executionRequest();
+    if (hasProjectDocs && values.urgency !== 'urgent') return executionRequest();
     return executionReady();
   }
 
   if (serviceKey === 'coursework') {
-    if (values.urgency === 'veryUrgent' || values.calculations || values.projectDocs) {
-      return executionRequest('Курсовая с расчётами, проектной документацией или сроком 1 день требует запроса к исполнителям.');
-    }
+    if (values.urgency === 'urgent') return executionReady();
+    if (values.urgency === 'veryUrgent') return executionRequest();
+    if (isHardSpecialty(values.specialization)) return executionRequest();
+    if (values.calculations || values.projectDocs) return executionRequest();
     return executionReady();
   }
 
   if (serviceKey === 'practice') {
-    if (values.urgency === 'veryUrgent' || values.projectDocs) {
-      return executionRequest('Практика со сложными доп. материалами или сроком 1 день требует подтверждения готовности.');
-    }
+    if (isHardSpecialty(values.specialization)) return executionRequest();
     return executionReady();
   }
 
   if (serviceKey === 'control') {
-    if (values.urgency === 'veryUrgent' || values.calculations) {
-      return executionRequest('Контрольная с расчётами или сроком сегодня требует запроса к исполнителям.');
-    }
+    if (values.urgency === 'urgent' || values.urgency === 'veryUrgent') return executionRequest();
+    if (isHardSpecialty(values.specialization)) return executionRequest();
+    if (values.calculations) return executionRequest();
     return executionReady();
   }
 
   if (serviceKey === 'referat' || serviceKey === 'aiCleaning') {
-    if (values.urgency === 'veryUrgent') {
-      return executionRequest('Заказ со сроком сегодня требует подтверждения готовности исполнителей.');
-    }
     return executionReady();
   }
 
   if (serviceKey === 'test') {
     const testsCount = Number(values.testsCount);
     if (!testsCount || testsCount < 1) return executionPending();
-    if (testsCount > 10) return executionRequest('Больше 10 тестов требует запроса по доступной нагрузке исполнителей.');
     return executionReady();
   }
 
@@ -586,23 +583,29 @@ function executionStatusForService(serviceKey, values) {
 
 function executionStatusForOrderItem(item) {
   const cfg = CONSTRUCTOR_KINDS[item.kind];
-  if (!cfg) return executionRequest('Неизвестная позиция требует ручной проверки.');
+  if (!cfg) return executionRequest();
 
   if (cfg.manual) {
-    return executionRequest('Своя позиция требует запроса, потому что параметры выполнения не формализованы.');
+    return executionRequest();
   }
 
-  if (cfg.preset === 'practice' || cfg.preset === 'coursework') {
+  if (cfg.preset === 'practice') {
     const quantity = Number(item.values.quantity);
     if (!quantity || quantity < 1) return executionPending();
-    if (quantity > 10) return executionRequest('Больше 10 однотипных работ требует проверки нагрузки исполнителей.');
+    if (item.values.practiceType === 'design') return executionRequest();
+    return executionReady();
+  }
+
+  if (cfg.preset === 'coursework') {
+    const quantity = Number(item.values.quantity);
+    if (!quantity || quantity < 1) return executionPending();
+    if (item.values.courseworkType === 'hard') return executionRequest();
     return executionReady();
   }
 
   if (cfg.preset === 'test') {
     const quantity = Number(item.values.quantity);
     if (!quantity || quantity < 1) return executionPending();
-    if (quantity > 10) return executionRequest('Больше 10 тестов требует запроса по доступной нагрузке исполнителей.');
     return executionReady();
   }
 
@@ -619,7 +622,7 @@ function executionStatusForOrder(items) {
   if (request) return request;
   const pending = statuses.find((status) => status.kind === 'pending');
   if (pending) return pending;
-  return executionReady('Можно проактивно выставить счёт клиенту по всем позициям заказа. Запрос к исполнителям не нужен.');
+  return executionReady();
 }
 
 function renderExecutionStatus(prefix, status) {
