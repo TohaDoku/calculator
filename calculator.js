@@ -534,7 +534,7 @@ function executionStatusForService(serviceKey, values) {
 
   if (serviceKey === 'diploma') {
     const hasProjectDocs = values.projectDocs === 'yes';
-    if (values.urgency === 'urgent' || values.urgency === 'veryUrgent') return executionReady();
+    if (values.urgency === 'normal') return executionReady();
     if (isHardSpecialty(values.specialization)) return executionRequest();
     if (hasProjectDocs) return executionRequest();
     return executionReady();
@@ -542,9 +542,9 @@ function executionStatusForService(serviceKey, values) {
 
   if (serviceKey === 'universityDiploma') {
     const hasProjectDocs = values.projectDocs === 'yes';
-    if (values.urgency === 'veryUrgent') return executionReady();
+    if (values.urgency === 'normal') return executionReady();
     if (isHardSpecialty(values.specialization)) return executionRequest();
-    if (hasProjectDocs && values.urgency !== 'urgent') return executionRequest();
+    if (hasProjectDocs) return executionRequest();
     return executionReady();
   }
 
